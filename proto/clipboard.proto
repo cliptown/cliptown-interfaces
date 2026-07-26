@@ -4,9 +4,10 @@ package cliptown;
 
 message ClipboardItem {
   string id = 1;
-  string content = 2;
-  int64 timestamp = 3;
-  bool is_pinned = 4;
+  bytes encrypted_data = 2; // AES-256-GCM ciphertext
+  bytes initialization_vector = 3; // IV / Nonce used for encryption
+  int64 timestamp = 4;
+  bool is_pinned = 5;
 }
 
 message SyncRequest {
