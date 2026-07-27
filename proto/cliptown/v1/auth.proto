@@ -1,0 +1,32 @@
+syntax = "proto3";
+package cliptown.v1;
+
+import "google/protobuf/timestamp.proto";
+
+message RegisterDeviceRequest {
+  string device_name = 1;
+  string platform = 2;
+  bytes encryption_public_key = 3;
+  bytes signing_public_key = 4;
+}
+
+message RegisteredDevice {
+  string device_id = 1;
+  string owner_id = 2;
+  string device_name = 3;
+  string platform = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp last_seen_at = 6;
+}
+
+message ReauthenticationPolicy {
+  uint32 interval_days = 1; // default 10, maximum 20
+  repeated string required_amr = 2; // e.g. pin, biometric, voice, shared-auth
+}
+
+message KeyShareEnvelope {
+  string recipient_device_id = 1;
+  bytes sender_ephemeral_public_key = 2;
+  bytes wrapped_master_key = 3;
+  bytes sender_signature = 4;
+}

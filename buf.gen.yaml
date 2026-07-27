@@ -1,0 +1,11 @@
+version: v2
+clean: true
+plugins:
+  - remote: buf.build/protocolbuffers/rust
+    out: generated/prost
+  - remote: buf.build/protocolbuffers/dart
+    out: generated/dart/lib/src/proto
+  - remote: buf.build/bufbuild/es
+    out: generated/typescript/src/proto
+    opt:
+      - target=ts

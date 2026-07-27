@@ -1,0 +1,38 @@
+syntax = "proto3";
+package cliptown.v1;
+
+import "google/protobuf/timestamp.proto";
+
+enum ClipKind {
+  CLIP_KIND_UNSPECIFIED = 0;
+  CLIP_KIND_TEXT = 1;
+  CLIP_KIND_HTML = 2;
+  CLIP_KIND_RTF = 3;
+  CLIP_KIND_IMAGE = 4;
+  CLIP_KIND_FILE = 5;
+  CLIP_KIND_FILE_LIST = 6;
+  CLIP_KIND_URL = 7;
+  CLIP_KIND_COLOR = 8;
+  CLIP_KIND_JSON = 9;
+}
+
+enum SearchPrivacyMode {
+  SEARCH_PRIVACY_MODE_UNSPECIFIED = 0;
+  SEARCH_PRIVACY_MODE_LOCAL_ONLY = 1;
+  SEARCH_PRIVACY_MODE_BLIND_INDEX = 2;
+  SEARCH_PRIVACY_MODE_OPT_IN_VECTOR = 3;
+}
+
+message CipherEnvelope {
+  string algorithm = 1; // xchacha20poly1305-v1 or aes-256-gcm-v1
+  bytes nonce = 2;
+  bytes ciphertext = 3;
+  bytes associated_data_hash = 4;
+  string key_id = 5;
+}
+
+message DeviceStamp {
+  string device_id = 1;
+  uint64 sequence = 2;
+  google.protobuf.Timestamp observed_at = 3;
+}

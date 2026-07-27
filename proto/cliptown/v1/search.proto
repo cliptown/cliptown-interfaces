@@ -1,0 +1,28 @@
+syntax = "proto3";
+package cliptown.v1;
+
+import "cliptown/v1/common.proto";
+import "cliptown/v1/clip.proto";
+
+message SearchRequest {
+  repeated string blind_terms = 1;
+  optional bytes query_embedding = 2;
+  SearchPrivacyMode privacy_mode = 3;
+  uint32 limit = 4;
+  bool pinned_only = 5;
+  repeated ClipKind kinds = 6;
+}
+
+message SearchHit {
+  ClipEnvelope clip = 1;
+  float score = 2;
+  repeated string reasons = 3;
+}
+
+message SearchResponse { repeated SearchHit hits = 1; }
+
+message RagCandidateRequest {
+  SearchRequest search = 1;
+  uint32 token_budget = 2;
+}
+message RagCandidateResponse { repeated SearchHit encrypted_candidates = 1; }

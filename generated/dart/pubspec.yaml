@@ -1,9 +1,5 @@
-name: cliptown_interfaces_dart
-description: Dart bindings for Cliptown interfaces.
+name: cliptown_interfaces
 version: 0.1.0
 publish_to: none
-
 environment:
-  sdk: '>=3.1.0 <4.0.0'
-
-dependencies:
+  sdk: '>=3.5.0 <4.0.0'
