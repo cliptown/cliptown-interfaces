@@ -1,0 +1,35 @@
+syntax = "proto3";
+package cliptown.v1;
+
+import "google/protobuf/timestamp.proto";
+import "cliptown/v1/common.proto";
+
+message ClipObjectRef {
+  string object_id = 1;
+  string media_type = 2;
+  uint64 byte_length = 3;
+  bytes ciphertext_sha256 = 4;
+  string storage_key = 5;
+}
+
+message ClipEnvelope {
+  string clip_id = 1;
+  string owner_id = 2;
+  ClipKind kind = 3;
+  CipherEnvelope payload = 4;
+  repeated ClipObjectRef objects = 5;
+  bool pinned = 6;
+  bool deleted = 7;
+  repeated string blind_terms = 8;
+  optional bytes opt_in_embedding = 9;
+  string source_app = 10;
+  string source_device_id = 11;
+  uint64 logical_clock = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+  map<string, string> encrypted_metadata = 15;
+}
+
+message PutClipRequest { ClipEnvelope clip = 1; string idempotency_key = 2; }
+message PutClipResponse { ClipEnvelope clip = 1; bool created = 2; }
+message DeleteClipRequest { string clip_id = 1; uint64 logical_clock = 2; }

@@ -1,0 +1,57 @@
+name: interfaces-ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: bufbuild/buf-setup-action@v1
+      - run: buf lint
+      - name: Breaking-change check
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin main --depth=1
+          if git cat-file -e origin/main:proto/cliptown/v1/common.proto 2>/dev/null; then
+            buf breaking --against 'https://github.com/cliptown/cliptown-interfaces.git#branch=main'
+          else
+            echo 'main has no ClipTown v1 baseline yet; this PR establishes it.'
+          fi
+      - run: python3 scripts/check-wire-contract.py
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install --global @stoplight/spectral-cli
+      - run: spectral lint openapi/cliptown.openapi.yaml
+      - name: Compile JSON Schema with strict formats
+        run: npx --yes --package ajv-cli --package ajv-formats ajv compile --spec=draft2020 -c ajv-formats -s json-schema/clip-envelope.schema.json --strict=true
+  generated-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo fmt --manifest-path generated/rust/Cargo.toml --check
+      - run: cargo clippy --manifest-path generated/rust/Cargo.toml --all-targets -- -D warnings
+      - run: cargo test --manifest-path generated/rust/Cargo.toml
+  generated-typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - working-directory: generated/typescript
+        run: npm install
+      - working-directory: generated/typescript
+        run: npm run typecheck && npm run build
+  generated-dart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+      - working-directory: generated/dart
+        run: dart pub get && dart analyze

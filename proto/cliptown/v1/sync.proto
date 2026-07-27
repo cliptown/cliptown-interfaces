@@ -1,0 +1,31 @@
+syntax = "proto3";
+package cliptown.v1;
+
+import "google/protobuf/timestamp.proto";
+import "cliptown/v1/clip.proto";
+import "cliptown/v1/common.proto";
+
+message SyncCursor {
+  string cursor = 1;
+  uint64 server_sequence = 2;
+}
+
+message SyncMutation {
+  string mutation_id = 1;
+  DeviceStamp device = 2;
+  ClipEnvelope clip = 3;
+  bytes device_signature = 4;
+}
+
+message PushRequest { repeated SyncMutation mutations = 1; SyncCursor base = 2; }
+message PushResult { repeated string accepted_mutation_ids = 1; repeated string rejected_mutation_ids = 2; SyncCursor cursor = 3; }
+message PullRequest { SyncCursor after = 1; uint32 limit = 2; }
+message PullResult { repeated SyncMutation mutations = 1; SyncCursor cursor = 2; bool has_more = 3; }
+
+message PeerHello {
+  string protocol_version = 1;
+  string device_id = 2;
+  bytes ephemeral_public_key = 3;
+  bytes device_signature = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}

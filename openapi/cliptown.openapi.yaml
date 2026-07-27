@@ -1,0 +1,313 @@
+openapi: 3.1.0
+info:
+  title: ClipTown API
+  version: 0.1.0
+  description: Ciphertext-only synchronization API for ClipTown devices.
+servers:
+  - url: https://api.cliptown.app
+security:
+  - supabaseBearer: []
+paths:
+  /healthz:
+    get:
+      security: []
+      responses:
+        '200':
+          description: healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, const: ok }
+  /readyz:
+    get:
+      security: []
+      responses:
+        '200': { description: ready }
+  /v1/clips:
+    get:
+      parameters:
+        - in: query
+          name: cursor
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+      responses:
+        '200':
+          description: encrypted clips
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClipPage' }
+    post:
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, minLength: 16, maxLength: 128 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClipEnvelope' }
+      responses:
+        '201':
+          description: created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClipEnvelope' }
+        '200':
+          description: existing idempotent result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClipEnvelope' }
+  /v1/clips/{clipId}:
+    parameters:
+      - in: path
+        name: clipId
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, minLength: 16, maxLength: 128 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClipEnvelope' }
+      responses:
+        '200':
+          description: upserted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClipEnvelope' }
+    delete:
+      responses:
+        '204': { description: tombstoned }
+  /v1/sync/push:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PushRequest' }
+      responses:
+        '200':
+          description: push result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PushResponse' }
+  /v1/sync/pull:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PullRequest' }
+      responses:
+        '200':
+          description: pull result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PullResponse' }
+  /v1/search:
+    post:
+      description: Searches blind indexes or explicitly opted-in vectors. Plaintext queries are never accepted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SearchRequest' }
+      responses:
+        '200':
+          description: encrypted candidates
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClipPage' }
+  /v1/rag/candidates:
+    post:
+      description: Returns encrypted candidate envelopes for client-side decrypt-and-rerank RAG.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SearchRequest' }
+      responses:
+        '200':
+          description: encrypted candidates
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClipPage' }
+  /v1/devices:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterDeviceRequest' }
+      responses:
+        '201':
+          description: registered
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegisteredDevice' }
+  /v1/devices/{deviceId}:
+    delete:
+      parameters:
+        - in: path
+          name: deviceId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: revoked }
+  /v1/settings/security:
+    get:
+      responses:
+        '200':
+          description: security settings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SecuritySettings' }
+    put:
+      description: Changes the reauthentication interval after a recent step-up authentication.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateSecuritySettings' }
+      responses:
+        '200':
+          description: updated security settings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SecuritySettings' }
+components:
+  securitySchemes:
+    supabaseBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    SecuritySettings:
+      type: object
+      additionalProperties: false
+      required: [reauth_interval_days, reauth_max_days]
+      properties:
+        reauth_interval_days: { type: integer, minimum: 1, maximum: 20 }
+        reauth_max_days: { type: integer, minimum: 1, maximum: 20 }
+    UpdateSecuritySettings:
+      type: object
+      additionalProperties: false
+      required: [reauth_interval_days]
+      properties:
+        reauth_interval_days: { type: integer, minimum: 1, maximum: 20 }
+    CipherEnvelope:
+      type: object
+      additionalProperties: false
+      required: [algorithm, nonce, ciphertext, key_id]
+      properties:
+        algorithm: { type: string, enum: [xchacha20poly1305-v1, aes-256-gcm-v1] }
+        nonce: { type: string, contentEncoding: base64 }
+        ciphertext: { type: string, contentEncoding: base64 }
+        associated_data_hash: { type: [string, 'null'], contentEncoding: base64 }
+        key_id: { type: string, minLength: 1, maxLength: 128 }
+    ClipEnvelope:
+      type: object
+      additionalProperties: false
+      required: [clip_id, kind, payload, pinned, deleted, blind_terms, source_device_id, logical_clock, created_at, updated_at]
+      properties:
+        clip_id: { type: string, format: uuid }
+        kind: { type: string, enum: [text, html, rtf, image, file, file_list, url, color, json] }
+        payload: { $ref: '#/components/schemas/CipherEnvelope' }
+        pinned: { type: boolean }
+        deleted: { type: boolean }
+        source_app: { type: [string, 'null'], maxLength: 256 }
+        source_device_id: { type: string, format: uuid }
+        logical_clock: { type: integer, minimum: 0 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        blind_terms:
+          type: array
+          maxItems: 256
+          uniqueItems: true
+          items: { type: string, minLength: 16, maxLength: 128 }
+        opt_in_embedding:
+          type: [array, 'null']
+          minItems: 1536
+          maxItems: 1536
+          items: { type: number }
+    ClipPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/ClipEnvelope' } }
+        next_cursor: { type: [string, 'null'] }
+    PushRequest:
+      type: object
+      additionalProperties: false
+      required: [mutations]
+      properties:
+        mutations: { type: array, maxItems: 500, items: { $ref: '#/components/schemas/ClipEnvelope' } }
+        cursor: { type: [string, 'null'] }
+    PushResponse:
+      type: object
+      additionalProperties: false
+      required: [accepted, cursor]
+      properties:
+        accepted: { type: array, items: { type: string, format: uuid } }
+        cursor: { type: [string, 'null'] }
+    PullRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        cursor: { type: [string, 'null'] }
+        limit: { type: integer, minimum: 1, maximum: 500, default: 100 }
+    PullResponse:
+      type: object
+      additionalProperties: false
+      required: [mutations, cursor, has_more]
+      properties:
+        mutations: { type: array, items: { $ref: '#/components/schemas/ClipEnvelope' } }
+        cursor: { type: [string, 'null'] }
+        has_more: { type: boolean }
+    SearchRequest:
+      type: object
+      additionalProperties: false
+      required: [privacy_mode]
+      properties:
+        privacy_mode: { type: string, enum: [local_only, blind_index, opt_in_vector] }
+        blind_terms: { type: array, maxItems: 64, items: { type: string } }
+        query_embedding:
+          type: [array, 'null']
+          minItems: 1536
+          maxItems: 1536
+          items: { type: number }
+        limit: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        pinned_only: { type: boolean, default: false }
+    RegisterDeviceRequest:
+      type: object
+      additionalProperties: false
+      required: [device_name, platform, encryption_public_key, signing_public_key]
+      properties:
+        device_name: { type: string, minLength: 1, maxLength: 120 }
+        platform: { type: string, enum: [macos, windows, linux, ios, android, browser, cli] }
+        encryption_public_key: { type: string, contentEncoding: base64 }
+        signing_public_key: { type: string, contentEncoding: base64 }
+    RegisteredDevice:
+      type: object
+      additionalProperties: false
+      required: [id, owner_id, name, platform, created_at, last_seen_at, revoked_at]
+      properties:
+        id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid }
+        name: { type: string }
+        platform: { type: string }
+        created_at: { type: string, format: date-time }
+        last_seen_at: { type: string, format: date-time }
+        revoked_at: { type: [string, 'null'], format: date-time }

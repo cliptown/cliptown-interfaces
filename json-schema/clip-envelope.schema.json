@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cliptown.app/schemas/clip-envelope.schema.json",
+  "title": "ClipTown Clip Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "clip_id",
+    "kind",
+    "payload",
+    "pinned",
+    "deleted",
+    "blind_terms",
+    "source_device_id",
+    "logical_clock",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "clip_id": {"type": "string", "format": "uuid"},
+    "kind": {"enum": ["text", "html", "rtf", "image", "file", "file_list", "url", "color", "json"]},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "nonce", "ciphertext", "key_id"],
+      "properties": {
+        "algorithm": {"enum": ["xchacha20poly1305-v1", "aes-256-gcm-v1"]},
+        "nonce": {"type": "string", "minLength": 16, "maxLength": 64},
+        "ciphertext": {"type": "string", "minLength": 1},
+        "associated_data_hash": {"type": ["string", "null"]},
+        "key_id": {"type": "string", "minLength": 1, "maxLength": 128}
+      }
+    },
+    "pinned": {"type": "boolean", "default": false},
+    "deleted": {"type": "boolean", "default": false},
+    "blind_terms": {"type": "array", "maxItems": 256, "uniqueItems": true, "items": {"type": "string", "minLength": 16, "maxLength": 128}},
+    "opt_in_embedding": {"type": ["array", "null"], "minItems": 1536, "maxItems": 1536, "items": {"type": "number"}},
+    "source_app": {"type": ["string", "null"], "maxLength": 256},
+    "source_device_id": {"type": "string", "format": "uuid"},
+    "logical_clock": {"type": "integer", "minimum": 0},
+    "created_at": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"}
+  }
+}
