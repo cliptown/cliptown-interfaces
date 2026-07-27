@@ -10,11 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: bufbuild/buf-setup-action@v1
       - run: buf lint
       - name: Breaking-change check
         if: github.event_name == 'pull_request'
-        run: buf breaking --against 'https://github.com/cliptown/cliptown-interfaces.git#branch=main'
+        run: |
+          git fetch origin main --depth=1
+          if git cat-file -e origin/main:proto/cliptown/v1/common.proto 2>/dev/null; then
+            buf breaking --against 'https://github.com/cliptown/cliptown-interfaces.git#branch=main'
+          else
+            echo 'main has no ClipTown v1 baseline yet; this PR establishes it.'
+          fi
       - run: python3 scripts/check-wire-contract.py
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
