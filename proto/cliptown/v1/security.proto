@@ -1,0 +1,152 @@
+syntax = "proto3";
+package cliptown.v1;
+
+import "google/protobuf/timestamp.proto";
+
+enum DeviceLifecycleState {
+  DEVICE_LIFECYCLE_STATE_UNSPECIFIED = 0;
+  DEVICE_LIFECYCLE_STATE_PENDING = 1;
+  DEVICE_LIFECYCLE_STATE_ACTIVE = 2;
+  DEVICE_LIFECYCLE_STATE_SUSPENDED = 3;
+  DEVICE_LIFECYCLE_STATE_REVOKED = 4;
+}
+
+enum RecoveryChannelKind {
+  RECOVERY_CHANNEL_KIND_UNSPECIFIED = 0;
+  RECOVERY_CHANNEL_KIND_EMAIL = 1;
+  RECOVERY_CHANNEL_KIND_PHONE = 2;
+}
+
+enum RecoveryPurpose {
+  RECOVERY_PURPOSE_UNSPECIFIED = 0;
+  RECOVERY_PURPOSE_ADD_DEVICE = 1;
+  RECOVERY_PURPOSE_ACCOUNT_RECOVERY = 2;
+  RECOVERY_PURPOSE_STEP_UP = 3;
+  RECOVERY_PURPOSE_CHANGE_CHANNEL = 4;
+  RECOVERY_PURPOSE_REVOKE_DEVICE = 5;
+}
+
+enum SignalEnvelopePurpose {
+  SIGNAL_ENVELOPE_PURPOSE_UNSPECIFIED = 0;
+  SIGNAL_ENVELOPE_PURPOSE_ACCOUNT_KEY_TRANSFER = 1;
+  SIGNAL_ENVELOPE_PURPOSE_CLIP_KEY = 2;
+  SIGNAL_ENVELOPE_PURPOSE_OBJECT_KEY = 3;
+  SIGNAL_ENVELOPE_PURPOSE_DEVICE_CONTROL = 4;
+  SIGNAL_ENVELOPE_PURPOSE_RECOVERY_PACKAGE = 5;
+  SIGNAL_ENVELOPE_PURPOSE_ACKNOWLEDGEMENT = 6;
+}
+
+message PinKdfPolicy {
+  string algorithm = 1; // argon2id-v1 or scrypt-v1
+  uint32 memory_kib = 2;
+  uint32 iterations = 3;
+  uint32 parallelism = 4;
+  uint32 max_attempts = 5;
+  uint32 lockout_seconds = 6;
+}
+
+message LocalUnlockPolicy {
+  bool pin_enabled = 1;
+  bool biometric_enabled = 2;
+  bool passkey_enabled = 3;
+  PinKdfPolicy pin_kdf = 4;
+}
+
+message SignalPreKeyBundle {
+  string device_id = 1;
+  uint32 protocol_version = 2;
+  uint32 registration_id = 3;
+  bytes identity_key = 4;
+  uint32 signed_prekey_id = 5;
+  bytes signed_prekey = 6;
+  bytes signed_prekey_signature = 7;
+  uint32 pq_signed_prekey_id = 8;
+  bytes pq_signed_prekey = 9;
+  bytes pq_signed_prekey_signature = 10;
+  optional uint32 one_time_prekey_id = 11;
+  optional bytes one_time_prekey = 12;
+  uint64 bundle_revision = 13;
+  google.protobuf.Timestamp published_at = 14;
+  google.protobuf.Timestamp expires_at = 15;
+}
+
+message DeviceRecord {
+  string device_id = 1;
+  string device_name = 2;
+  string platform = 3;
+  DeviceLifecycleState state = 4;
+  uint64 device_list_revision = 5;
+  bytes identity_key_fingerprint = 6;
+  LocalUnlockPolicy local_unlock = 7;
+  google.protobuf.Timestamp created_at = 8;
+  optional google.protobuf.Timestamp verified_at = 9;
+  optional google.protobuf.Timestamp last_seen_at = 10;
+  optional google.protobuf.Timestamp revoked_at = 11;
+}
+
+message DeviceListSnapshot {
+  uint64 revision = 1;
+  repeated DeviceRecord devices = 2;
+  bytes signer_device_id = 3;
+  bytes signature = 4;
+}
+
+message SignalEnvelopeMetadata {
+  uint32 protocol_version = 1;
+  string envelope_id = 2;
+  string account_id = 3;
+  string sender_device_id = 4;
+  string recipient_device_id = 5;
+  string session_id = 6;
+  uint64 message_number = 7;
+  SignalEnvelopePurpose purpose = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp expires_at = 10;
+}
+
+message SignalCiphertextEnvelope {
+  SignalEnvelopeMetadata metadata = 1;
+  bytes ciphertext = 2;
+}
+
+message RecoveryChannel {
+  string channel_id = 1;
+  RecoveryChannelKind kind = 2;
+  string masked_destination = 3;
+  google.protobuf.Timestamp created_at = 4;
+  optional google.protobuf.Timestamp verified_at = 5;
+  optional google.protobuf.Timestamp disabled_at = 6;
+}
+
+message UpsertRecoveryChannelRequest {
+  RecoveryChannelKind kind = 1;
+  string destination = 2;
+}
+
+message RecoveryChallenge {
+  string challenge_id = 1;
+  string channel_id = 2;
+  RecoveryPurpose purpose = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  uint32 remaining_attempts = 5;
+}
+
+message VerifyRecoveryChallengeRequest {
+  string challenge_id = 1;
+  string code = 2;
+}
+
+message DeviceEnrollmentRequest {
+  string device_name = 1;
+  string platform = 2;
+  SignalPreKeyBundle prekey_bundle = 3;
+  LocalUnlockPolicy local_unlock = 4;
+  string enrollment_nonce = 5;
+}
+
+message DeviceRevocationRequest {
+  string device_id = 1;
+  uint64 expected_device_list_revision = 2;
+  string reason_code = 3;
+  bytes authorizing_device_signature = 4;
+}

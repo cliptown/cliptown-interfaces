@@ -1,3 +1,5 @@
+export 'src/security.dart';
+
 enum ClipKind { text, html, rtf, image, file, fileList, url, color, json }
 enum SearchPrivacyMode { localOnly, blindIndex, optInVector }
 

@@ -28,8 +28,11 @@ jobs:
         with: { node-version: 22 }
       - run: npm install --global @stoplight/spectral-cli
       - run: spectral lint openapi/cliptown.openapi.yaml
-      - name: Compile JSON Schema with strict formats
-        run: npx --yes --package ajv-cli --package ajv-formats ajv compile --spec=draft2020 -c ajv-formats -s json-schema/clip-envelope.schema.json --strict=true
+      - name: Compile JSON Schemas with strict formats
+        run: |
+          for schema in json-schema/*.schema.json; do
+            npx --yes --package ajv-cli --package ajv-formats ajv compile --spec=draft2020 -c ajv-formats -s "$schema" --strict=true
+          done
   generated-rust:
     runs-on: ubuntu-latest
     steps:

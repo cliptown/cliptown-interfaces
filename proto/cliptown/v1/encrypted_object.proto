@@ -1,0 +1,51 @@
+syntax = "proto3";
+package cliptown.v1;
+
+import "google/protobuf/timestamp.proto";
+import "cliptown/v1/common.proto";
+
+message WrappedContentKey {
+  string recipient_device_id = 1;
+  string key_id = 2;
+  string algorithm = 3;
+  bytes nonce = 4;
+  bytes wrapped_key = 5;
+  bytes associated_data_hash = 6;
+}
+
+message EncryptedObjectChunk {
+  uint32 chunk_index = 1;
+  uint64 ciphertext_length = 2;
+  bytes ciphertext_sha256 = 3;
+  bytes nonce = 4;
+  string randomized_storage_key = 5;
+}
+
+message EncryptedObjectManifest {
+  string manifest_id = 1;
+  string object_id = 2;
+  string clip_id = 3;
+  string content_cipher_version = 4;
+  uint64 plaintext_length = 5;
+  uint64 ciphertext_length = 6;
+  uint32 chunk_size = 7;
+  repeated EncryptedObjectChunk chunks = 8;
+  repeated WrappedContentKey wrapped_keys = 9;
+  CipherEnvelope encrypted_metadata = 10;
+  bytes ciphertext_sha256 = 11;
+  google.protobuf.Timestamp created_at = 12;
+}
+
+message BeginEncryptedObjectUploadRequest {
+  string object_id = 1;
+  string manifest_id = 2;
+  uint64 ciphertext_length = 3;
+  uint32 chunk_count = 4;
+  string idempotency_key = 5;
+}
+
+message EncryptedObjectUploadGrant {
+  string object_id = 1;
+  string upload_id = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}

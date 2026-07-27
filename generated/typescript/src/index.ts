@@ -1,3 +1,5 @@
+export * from './security.js';
+
 export type ClipKind = 'text' | 'html' | 'rtf' | 'image' | 'file' | 'file_list' | 'url' | 'color' | 'json';
 export type SearchPrivacyMode = 'local_only' | 'blind_index' | 'opt_in_vector';
 export type CipherAlgorithm = 'xchacha20poly1305-v1' | 'aes-256-gcm-v1';
