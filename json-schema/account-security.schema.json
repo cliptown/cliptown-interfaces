@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cliptown.app/schemas/account-security.schema.json",
+  "title": "ClipTown account security contracts",
+  "type": "object",
+  "$defs": {
+    "LocalUnlockPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pin_enabled", "biometric_enabled", "passkey_enabled"],
+      "properties": {
+        "pin_enabled": {"type": "boolean"},
+        "biometric_enabled": {"type": "boolean"},
+        "passkey_enabled": {"type": "boolean"},
+        "pin_kdf": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["algorithm", "memory_kib", "iterations", "parallelism", "max_attempts", "lockout_seconds"],
+          "properties": {
+            "algorithm": {"type": "string", "enum": ["argon2id-v1", "scrypt-v1"]},
+            "memory_kib": {"type": "integer", "minimum": 8192, "maximum": 1048576},
+            "iterations": {"type": "integer", "minimum": 1, "maximum": 20},
+            "parallelism": {"type": "integer", "minimum": 1, "maximum": 8},
+            "max_attempts": {"type": "integer", "minimum": 3, "maximum": 20},
+            "lockout_seconds": {"type": "integer", "minimum": 1, "maximum": 86400}
+          }
+        }
+      }
+    },
+    "DeviceRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["device_id", "device_name", "platform", "state", "device_list_revision", "identity_key_fingerprint", "local_unlock", "created_at"],
+      "properties": {
+        "device_id": {"type": "string", "format": "uuid"},
+        "device_name": {"type": "string", "minLength": 1, "maxLength": 120},
+        "platform": {"type": "string", "enum": ["macos", "windows", "linux", "ios", "android", "browser", "cli"]},
+        "state": {"type": "string", "enum": ["pending", "active", "suspended", "revoked"]},
+        "device_list_revision": {"type": "integer", "minimum": 1},
+        "identity_key_fingerprint": {"type": "string", "contentEncoding": "base64"},
+        "local_unlock": {"$ref": "#/$defs/LocalUnlockPolicy"},
+        "created_at": {"type": "string", "format": "date-time"},
+        "verified_at": {"type": ["string", "null"], "format": "date-time"},
+        "last_seen_at": {"type": ["string", "null"], "format": "date-time"},
+        "revoked_at": {"type": ["string", "null"], "format": "date-time"}
+      }
+    },
+    "RecoveryChannel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["channel_id", "kind", "masked_destination", "created_at"],
+      "properties": {
+        "channel_id": {"type": "string", "format": "uuid"},
+        "kind": {"type": "string", "enum": ["email", "phone"]},
+        "masked_destination": {"type": "string", "minLength": 3, "maxLength": 256},
+        "created_at": {"type": "string", "format": "date-time"},
+        "verified_at": {"type": ["string", "null"], "format": "date-time"},
+        "disabled_at": {"type": ["string", "null"], "format": "date-time"}
+      }
+    },
+    "SignalEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol_version", "envelope_id", "account_id", "sender_device_id", "recipient_device_id", "session_id", "message_number", "purpose", "created_at", "expires_at", "ciphertext"],
+      "properties": {
+        "protocol_version": {"type": "integer", "const": 1},
+        "envelope_id": {"type": "string", "format": "uuid"},
+        "account_id": {"type": "string", "format": "uuid"},
+        "sender_device_id": {"type": "string", "format": "uuid"},
+        "recipient_device_id": {"type": "string", "format": "uuid"},
+        "session_id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9_.:-]+$"},
+        "message_number": {"type": "integer", "minimum": 0},
+        "purpose": {"type": "string", "enum": ["account_key_transfer", "clip_key", "object_key", "device_control", "recovery_package", "acknowledgement"]},
+        "created_at": {"type": "string", "format": "date-time"},
+        "expires_at": {"type": "string", "format": "date-time"},
+        "ciphertext": {"type": "string", "contentEncoding": "base64", "minLength": 1, "maxLength": 699052}
+      }
+    }
+  }
+}
