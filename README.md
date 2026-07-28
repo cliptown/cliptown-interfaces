@@ -16,6 +16,17 @@ Versioned contracts shared by the ClipTown API, Flutter app, browser extension, 
 
 See [`docs/signal-device-sync-and-recovery.md`](docs/signal-device-sync-and-recovery.md). Signal Protocol sessions authorize devices and deliver small wrapped account/clip/object keys. Text, metadata, images, and files are encrypted on trusted devices before PostgreSQL, Supabase, Rust services, or Cloudflare R2 receive them.
 
+## Reviewed toolchain
+
+The contract repository intentionally avoids floating compiler channels:
+
+- Buf CLI `1.72.0`
+- Rust `1.88.0` with `rustfmt` and Clippy
+- Dart `3.12.2`
+- Node.js `22.x`
+
+CI verifies the exact Buf, Rust, and Dart versions before contract or generated-model checks run. Version changes must be explicit reviewable pull requests rather than silent updates from `stable` channels.
+
 ## Generate
 
 ```bash
