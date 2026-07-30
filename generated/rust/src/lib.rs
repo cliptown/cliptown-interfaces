@@ -1,7 +1,9 @@
 mod app_vault;
 mod security;
+mod step_up;
 pub use app_vault::*;
 pub use security::*;
+pub use step_up::*;
 
 use std::collections::HashSet;
 
