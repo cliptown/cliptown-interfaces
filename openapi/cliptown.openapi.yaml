@@ -374,23 +374,13 @@ components:
         opaque_record_id: { type: string, minLength: 16, maxLength: 128, pattern: '^[A-Za-z0-9_-]+$' }
         payload:
           $ref: '#/components/schemas/CipherEnvelope'
-          description: Ciphertext for a live record; absent for a tombstone.
+          description: Ciphertext for a live record; absent for a tombstone. The stricter JSON Schema and generated validators enforce the live-record/tombstone exclusive-or invariant.
         deleted: { type: boolean }
         source_device_id: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9._:-]+$' }
         logical_clock: { type: integer, minimum: 0 }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         device_signature: { type: string, contentEncoding: base64, minLength: 43, maxLength: 684 }
-      allOf:
-        - if:
-            properties:
-              deleted: { const: true }
-            required: [deleted]
-          then:
-            not:
-              required: [payload]
-          else:
-            required: [payload]
     AppVaultCursor:
       type: object
       additionalProperties: false
