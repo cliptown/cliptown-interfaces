@@ -75,7 +75,9 @@ fn require_portable_identifier(value: &str, field: &str) -> Result<(), String> {
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':'))
     {
-        return Err(format!("{field} must use bounded portable ASCII characters"));
+        return Err(format!(
+            "{field} must use bounded portable ASCII characters"
+        ));
     }
     Ok(())
 }
@@ -83,11 +85,11 @@ fn require_portable_identifier(value: &str, field: &str) -> Result<(), String> {
 fn require_bounded_text(value: &str, field: &str, max_len: usize) -> Result<(), String> {
     if value.is_empty()
         || value.len() > max_len
-        || value
-            .chars()
-            .any(|character| character.is_control())
+        || value.chars().any(|character| character.is_control())
     {
-        return Err(format!("{field} is empty, oversized, or contains control characters"));
+        return Err(format!(
+            "{field} is empty, oversized, or contains control characters"
+        ));
     }
     Ok(())
 }
