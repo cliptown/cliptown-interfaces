@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cliptown.app/schemas/app-vault-mutation.schema.json",
+  "title": "ClipTown Application Vault Mutation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "mutation_id",
+    "app_id",
+    "namespace",
+    "opaque_record_id",
+    "deleted",
+    "source_device_id",
+    "logical_clock",
+    "created_at",
+    "updated_at",
+    "device_signature"
+  ],
+  "properties": {
+    "protocol_version": {"type": "integer", "const": 1},
+    "mutation_id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$"},
+    "app_id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+    "namespace": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$"},
+    "opaque_record_id": {"type": "string", "minLength": 16, "maxLength": 128, "pattern": "^[A-Za-z0-9_-]+$"},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "nonce", "ciphertext", "associated_data_hash", "key_id"],
+      "properties": {
+        "algorithm": {"type": "string", "enum": ["xchacha20poly1305-v1", "aes-256-gcm-v1"]},
+        "nonce": {"type": "string", "contentEncoding": "base64", "minLength": 16, "maxLength": 64},
+        "ciphertext": {"type": "string", "contentEncoding": "base64", "minLength": 1, "maxLength": 699052},
+        "associated_data_hash": {"type": "string", "contentEncoding": "base64", "minLength": 43, "maxLength": 44},
+        "key_id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$"}
+      }
+    },
+    "deleted": {"type": "boolean"},
+    "source_device_id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$"},
+    "logical_clock": {"type": "integer", "minimum": 0},
+    "created_at": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "device_signature": {"type": "string", "contentEncoding": "base64", "minLength": 43, "maxLength": 684}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"deleted": {"const": true}}, "required": ["deleted"]},
+      "then": {"not": {"required": ["payload"]}},
+      "else": {"required": ["payload"]}
+    }
+  ]
+}
