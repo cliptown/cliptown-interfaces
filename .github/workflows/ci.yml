@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 jobs:
-  contracts:
+  protobuf-wire:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,6 +29,11 @@ jobs:
             echo 'main has no ClipTown v1 baseline yet; this PR establishes it.'
           fi
       - run: python3 scripts/check-wire-contract.py
+
+  openapi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - run: python3 scripts/check-openapi-enum-duplicates.py openapi/cliptown.openapi.yaml
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
@@ -37,11 +42,19 @@ jobs:
       - name: Verify pinned Spectral version
         run: test "$(spectral --version)" = "6.15.0"
       - run: spectral lint openapi/cliptown.openapi.yaml
-      - name: Compile JSON Schemas with strict formats
+
+  json-schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Compile JSON Schemas with pinned validators
         run: |
           for schema in json-schema/*.schema.json; do
-            npx --yes --package ajv-cli --package ajv-formats ajv compile --spec=draft2020 -c ajv-formats -s "$schema" --strict=true
+            npx --yes --package ajv-cli@5.0.0 --package ajv-formats@3.0.1 ajv compile --spec=draft2020 -c ajv-formats -s "$schema" --strict=true
           done
+
   generated-rust:
     runs-on: ubuntu-latest
     steps:
@@ -53,6 +66,7 @@ jobs:
       - run: cargo fmt --manifest-path generated/rust/Cargo.toml --check
       - run: cargo clippy --manifest-path generated/rust/Cargo.toml --all-targets -- -D warnings
       - run: cargo test --manifest-path generated/rust/Cargo.toml
+
   generated-typescript:
     runs-on: ubuntu-latest
     steps:
@@ -63,6 +77,7 @@ jobs:
         run: npm install
       - working-directory: generated/typescript
         run: npm run typecheck && npm run build
+
   generated-dart:
     runs-on: ubuntu-latest
     steps:
