@@ -31,7 +31,10 @@ jobs:
       - run: python3 scripts/check-wire-contract.py
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: npm install --global @stoplight/spectral-cli
+      - name: Install pinned Spectral 6.15.0
+        run: npm install --global @stoplight/spectral-cli@6.15.0
+      - name: Verify pinned Spectral version
+        run: test "$(spectral --version)" = "6.15.0"
       - run: spectral lint openapi/cliptown.openapi.yaml
       - name: Compile JSON Schemas with strict formats
         run: |
