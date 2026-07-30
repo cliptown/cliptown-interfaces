@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: ClipTown API
-  version: 0.1.0
-  description: Ciphertext-only synchronization API for ClipTown devices.
+  version: 0.2.0
+  description: Ciphertext-only synchronization API for ClipTown devices and isolated application vaults.
 servers:
   - url: https://api.cliptown.app
 security:
@@ -115,6 +115,56 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PullResponse' }
+  /v1/app-vault/{appId}/sync/push:
+    parameters:
+      - in: path
+        name: appId
+        required: true
+        description: Reverse-DNS application identifier, for example app.3fa.authenticator.
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$'
+    post:
+      description: >-
+        Pushes ciphertext-only application records. These records are excluded from
+        clipboard history, search, RAG, preview, paste, pinning, and clipboard export.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AppVaultPushRequest' }
+      responses:
+        '200':
+          description: application-vault push result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppVaultPushResponse' }
+  /v1/app-vault/{appId}/sync/pull:
+    parameters:
+      - in: path
+        name: appId
+        required: true
+        description: Reverse-DNS application identifier, for example app.3fa.authenticator.
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$'
+    post:
+      description: Pulls opaque mutations authorized for the authenticated active device.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AppVaultPullRequest' }
+      responses:
+        '200':
+          description: application-vault pull result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppVaultPullResponse' }
   /v1/search:
     post:
       description: Searches blind indexes or explicitly opted-in vectors. Plaintext queries are never accepted.
@@ -158,13 +208,16 @@ paths:
               schema: { $ref: '#/components/schemas/RegisteredDevice' }
   /v1/devices/{deviceId}:
     delete:
+      security:
+        - supabaseBearer: []
+          threefaStepUp: []
       parameters:
         - in: path
           name: deviceId
           required: true
           schema: { type: string, format: uuid }
       responses:
-        '204': { description: revoked }
+        '204': { description: revoked after consuming the action-bound step-up proof }
   /v1/settings/security:
     get:
       responses:
@@ -174,7 +227,10 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SecuritySettings' }
     put:
-      description: Changes the reauthentication interval after a recent step-up authentication.
+      security:
+        - supabaseBearer: []
+          threefaStepUp: []
+      description: Changes the reauthentication interval after a recent one-time step-up authorization.
       requestBody:
         required: true
         content:
@@ -192,6 +248,14 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    threefaStepUp:
+      type: apiKey
+      in: header
+      name: X-3FA-Step-Up
+      description: >-
+        Compact, signed, single-use ExternalStepUpProof. It is audience-, action-,
+        challenge-, subject-, device-, and expiry-bound; it is never accepted as a
+        login, refresh, ClipTown bearer, or reusable 3FA device token.
   schemas:
     SecuritySettings:
       type: object
@@ -276,6 +340,86 @@ components:
         mutations: { type: array, items: { $ref: '#/components/schemas/ClipEnvelope' } }
         cursor: { type: [string, 'null'] }
         has_more: { type: boolean }
+    AppVaultMutation:
+      type: object
+      additionalProperties: false
+      required: [protocol_version, mutation_id, app_id, namespace, opaque_record_id, deleted, source_device_id, logical_clock, created_at, updated_at, device_signature]
+      properties:
+        protocol_version: { type: integer, const: 1 }
+        mutation_id: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9._:-]+$' }
+        app_id: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$' }
+        namespace: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9._:-]+$' }
+        opaque_record_id: { type: string, minLength: 16, maxLength: 128, pattern: '^[A-Za-z0-9_-]+$' }
+        payload:
+          oneOf:
+            - { $ref: '#/components/schemas/CipherEnvelope' }
+            - { type: 'null' }
+          description: Ciphertext for a live record; null or absent for a tombstone.
+        deleted: { type: boolean }
+        source_device_id: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9._:-]+$' }
+        logical_clock: { type: integer, minimum: 0 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        device_signature: { type: string, contentEncoding: base64, minLength: 43, maxLength: 684 }
+    AppVaultCursor:
+      type: object
+      additionalProperties: false
+      required: [server_sequence]
+      properties:
+        server_sequence: { type: integer, minimum: 0 }
+    AppVaultChange:
+      type: object
+      additionalProperties: false
+      required: [server_sequence, mutation]
+      properties:
+        server_sequence: { type: integer, minimum: 1 }
+        mutation: { $ref: '#/components/schemas/AppVaultMutation' }
+    AppVaultPushRequest:
+      type: object
+      additionalProperties: false
+      required: [mutations]
+      properties:
+        mutations: { type: array, maxItems: 500, items: { $ref: '#/components/schemas/AppVaultMutation' } }
+        base: { $ref: '#/components/schemas/AppVaultCursor' }
+    AppVaultPushResponse:
+      type: object
+      additionalProperties: false
+      required: [accepted, rejected_mutation_ids, cursor]
+      properties:
+        accepted: { type: array, maxItems: 500, items: { $ref: '#/components/schemas/AppVaultMutation' } }
+        rejected_mutation_ids: { type: array, maxItems: 500, items: { type: string, minLength: 1, maxLength: 128 } }
+        cursor: { $ref: '#/components/schemas/AppVaultCursor' }
+    AppVaultPullRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        after: { $ref: '#/components/schemas/AppVaultCursor' }
+        limit: { type: integer, minimum: 1, maximum: 500, default: 100 }
+    AppVaultPullResponse:
+      type: object
+      additionalProperties: false
+      required: [changes, cursor, has_more]
+      properties:
+        changes: { type: array, maxItems: 500, items: { $ref: '#/components/schemas/AppVaultChange' } }
+        cursor: { $ref: '#/components/schemas/AppVaultCursor' }
+        has_more: { type: boolean }
+    ExternalStepUpProof:
+      type: object
+      additionalProperties: false
+      required: [protocol_version, proof_id, issuer, subject, audience, device_id, challenge_id, action, issued_at, expires_at, signing_key_id, signature]
+      properties:
+        protocol_version: { type: integer, const: 1 }
+        proof_id: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9._:-]+$' }
+        issuer: { type: string, minLength: 1, maxLength: 256 }
+        subject: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9._:-]+$' }
+        audience: { type: string, const: cliptown }
+        device_id: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9._:-]+$' }
+        challenge_id: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9._:-]+$' }
+        action: { type: string, enum: [enroll_device, revoke_device, update_security_settings, change_recovery_channel, export_app_vault, recover_account] }
+        issued_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        signing_key_id: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9._:-]+$' }
+        signature: { type: string, contentEncoding: base64, minLength: 43, maxLength: 684 }
     SearchRequest:
       type: object
       additionalProperties: false
