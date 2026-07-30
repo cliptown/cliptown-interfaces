@@ -151,7 +151,9 @@ impl AppVaultPullResult {
             if change.server_sequence <= previous
                 || change.server_sequence > self.cursor.server_sequence
             {
-                return Err("app-vault server sequences must be increasing and cursor-bounded".into());
+                return Err(
+                    "app-vault server sequences must be increasing and cursor-bounded".into(),
+                );
             }
             previous = change.server_sequence;
         }
@@ -169,7 +171,10 @@ fn validate_cipher_envelope(payload: &CipherEnvelope) -> Result<(), String> {
     if payload.nonce.is_empty()
         || payload.ciphertext.is_empty()
         || payload.ciphertext.len() > MAX_APP_VAULT_CIPHERTEXT_BASE64_LEN
-        || payload.associated_data_hash.as_deref().is_none_or(str::is_empty)
+        || payload
+            .associated_data_hash
+            .as_deref()
+            .is_none_or(str::is_empty)
         || payload.key_id.is_empty()
         || payload.key_id.len() > 128
     {
@@ -185,7 +190,9 @@ fn require_portable_identifier(value: &str, field: &str) -> Result<(), String> {
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':'))
     {
-        return Err(format!("{field} must use bounded portable ASCII characters"));
+        return Err(format!(
+            "{field} must use bounded portable ASCII characters"
+        ));
     }
     Ok(())
 }
@@ -229,9 +236,7 @@ mod tests {
                 algorithm: "xchacha20poly1305-v1".into(),
                 nonce: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".into(),
                 ciphertext: "AQIDBA==".into(),
-                associated_data_hash: Some(
-                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=".into(),
-                ),
+                associated_data_hash: Some("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=".into()),
                 key_id: "key-1".into(),
             }),
             deleted: false,
