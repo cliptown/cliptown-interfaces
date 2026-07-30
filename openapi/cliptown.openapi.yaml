@@ -127,9 +127,13 @@ paths:
           maxLength: 128
           pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$'
     post:
+      security:
+        - supabaseBearer: []
+          cliptownDeviceToken: []
       description: >-
-        Pushes ciphertext-only application records. These records are excluded from
-        clipboard history, search, RAG, preview, paste, pinning, and clipboard export.
+        Pushes ciphertext-only application records for the independently authenticated
+        active device. These records are excluded from clipboard history, search, RAG,
+        preview, paste, pinning, clipboard export, and ordinary clip retention.
       requestBody:
         required: true
         content:
@@ -141,6 +145,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AppVaultPushResponse' }
+        '401': { description: primary or device authentication is invalid }
+        '403': { description: device is pending, suspended, revoked, or not authorized for the app id }
   /v1/app-vault/{appId}/sync/pull:
     parameters:
       - in: path
@@ -153,7 +159,10 @@ paths:
           maxLength: 128
           pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$'
     post:
-      description: Pulls opaque mutations authorized for the authenticated active device.
+      security:
+        - supabaseBearer: []
+          cliptownDeviceToken: []
+      description: Pulls opaque mutations authorized for the independently authenticated active device.
       requestBody:
         required: true
         content:
@@ -165,6 +174,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AppVaultPullResponse' }
+        '401': { description: primary or device authentication is invalid }
+        '403': { description: device is pending, suspended, revoked, or not authorized for the app id }
   /v1/search:
     post:
       description: Searches blind indexes or explicitly opted-in vectors. Plaintext queries are never accepted.
@@ -210,6 +221,7 @@ paths:
     delete:
       security:
         - supabaseBearer: []
+          cliptownDeviceToken: []
           threefaStepUp: []
       parameters:
         - in: path
@@ -229,6 +241,7 @@ paths:
     put:
       security:
         - supabaseBearer: []
+          cliptownDeviceToken: []
           threefaStepUp: []
       description: Changes the reauthentication interval after a recent one-time step-up authorization.
       requestBody:
@@ -248,6 +261,15 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description: Short-lived primary shared-auth/Supabase user session.
+    cliptownDeviceToken:
+      type: apiKey
+      in: header
+      name: X-ClipTown-Device-Token
+      description: >-
+        Random service-local credential issued independently to one enrolled ClipTown
+        device. Only a slow/hash-safe digest is stored server-side. It is never copied
+        to sibling devices, accepted for primary login, or embedded in app-vault data.
     threefaStepUp:
       type: apiKey
       in: header
@@ -351,16 +373,24 @@ components:
         namespace: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9._:-]+$' }
         opaque_record_id: { type: string, minLength: 16, maxLength: 128, pattern: '^[A-Za-z0-9_-]+$' }
         payload:
-          oneOf:
-            - { $ref: '#/components/schemas/CipherEnvelope' }
-            - { type: 'null' }
-          description: Ciphertext for a live record; null or absent for a tombstone.
+          $ref: '#/components/schemas/CipherEnvelope'
+          description: Ciphertext for a live record; absent for a tombstone.
         deleted: { type: boolean }
         source_device_id: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9._:-]+$' }
         logical_clock: { type: integer, minimum: 0 }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         device_signature: { type: string, contentEncoding: base64, minLength: 43, maxLength: 684 }
+      allOf:
+        - if:
+            properties:
+              deleted: { const: true }
+            required: [deleted]
+          then:
+            not:
+              required: [payload]
+          else:
+            required: [payload]
     AppVaultCursor:
       type: object
       additionalProperties: false
