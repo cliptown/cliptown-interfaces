@@ -29,6 +29,7 @@ jobs:
             echo 'main has no ClipTown v1 baseline yet; this PR establishes it.'
           fi
       - run: python3 scripts/check-wire-contract.py
+      - run: python3 scripts/check-openapi-enum-duplicates.py openapi/cliptown.openapi.yaml
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - name: Install pinned Spectral 6.15.0
