@@ -1,4 +1,6 @@
+mod app_vault;
 mod security;
+pub use app_vault::*;
 pub use security::*;
 
 use std::collections::HashSet;
