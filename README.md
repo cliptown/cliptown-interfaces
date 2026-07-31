@@ -18,7 +18,7 @@ Versioned contracts shared by the ClipTown API, Flutter app, browser extension, 
 
 Companion metadata never replaces a standard clipboard representation. A Memebank-aware clipboard write should still include image bytes, a safe temporary file reference, or user-authorized text so ClipTown remains usable without network access or a live Memebank session. Unknown additive fields are retained only when permitted by the user's normal ClipTown policy; unsupported major schema versions are not interpreted.
 
-Companion clipboard metadata and isolated application-vault records are different trust domains. Companion metadata may accompany an explicit user clipboard export; application-vault records are opaque ciphertext and are never interpreted, indexed, previewed, pasted, retained, or exported as clipboard content.
+Companion clipboard metadata and isolated application-vault records are different trust domains. Companion metadata may accompany an explicit user clipboard export; application-vault records are opaque ciphertext and are never interpreted, indexed, previewed, pasted, retained, or exported as clipboard content. Route validation, generated models, and wire-contract CI enforce this separation rather than relying only on application convention.
 
 ## 3FA reciprocal integration
 
