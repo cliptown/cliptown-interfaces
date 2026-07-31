@@ -31,6 +31,7 @@ pub enum SignalEnvelopePurpose {
     DeviceControl,
     RecoveryPackage,
     Acknowledgement,
+    AppVaultKey,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -272,5 +273,13 @@ mod tests {
             }),
         };
         assert!(policy.validate().is_ok());
+    }
+
+    #[test]
+    fn app_vault_signal_purpose_is_snake_case() {
+        assert_eq!(
+            serde_json::to_string(&SignalEnvelopePurpose::AppVaultKey).unwrap(),
+            "\"app_vault_key\""
+        );
     }
 }

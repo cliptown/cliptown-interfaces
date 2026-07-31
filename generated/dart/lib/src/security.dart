@@ -7,6 +7,7 @@ enum SignalEnvelopePurpose {
   deviceControl,
   recoveryPackage,
   acknowledgement,
+  appVaultKey,
 }
 
 class PinKdfPolicy {

@@ -34,6 +34,19 @@ enum SignalEnvelopePurpose {
   SIGNAL_ENVELOPE_PURPOSE_DEVICE_CONTROL = 4;
   SIGNAL_ENVELOPE_PURPOSE_RECOVERY_PACKAGE = 5;
   SIGNAL_ENVELOPE_PURPOSE_ACKNOWLEDGEMENT = 6;
+  SIGNAL_ENVELOPE_PURPOSE_APP_VAULT_KEY = 7;
+}
+
+// Sensitive ClipTown operations that may require an additive, one-time proof
+// from an external authority such as a registered 3FA device.
+enum ExternalStepUpAction {
+  EXTERNAL_STEP_UP_ACTION_UNSPECIFIED = 0;
+  EXTERNAL_STEP_UP_ACTION_ENROLL_DEVICE = 1;
+  EXTERNAL_STEP_UP_ACTION_REVOKE_DEVICE = 2;
+  EXTERNAL_STEP_UP_ACTION_UPDATE_SECURITY_SETTINGS = 3;
+  EXTERNAL_STEP_UP_ACTION_CHANGE_RECOVERY_CHANNEL = 4;
+  EXTERNAL_STEP_UP_ACTION_EXPORT_APP_VAULT = 5;
+  EXTERNAL_STEP_UP_ACTION_RECOVER_ACCOUNT = 6;
 }
 
 message PinKdfPolicy {
@@ -107,6 +120,24 @@ message SignalEnvelopeMetadata {
 message SignalCiphertextEnvelope {
   SignalEnvelopeMetadata metadata = 1;
   bytes ciphertext = 2;
+}
+
+// One-time action authorization. It is not a login, refresh, ClipTown bearer,
+// or reusable device token. The verifier consumes proof_id and challenge_id
+// atomically before the protected operation commits.
+message ExternalStepUpProof {
+  uint32 protocol_version = 1;
+  string proof_id = 2;
+  string issuer = 3;
+  string subject = 4;
+  string audience = 5;
+  string device_id = 6;
+  string challenge_id = 7;
+  ExternalStepUpAction action = 8;
+  google.protobuf.Timestamp issued_at = 9;
+  google.protobuf.Timestamp expires_at = 10;
+  string signing_key_id = 11;
+  bytes signature = 12;
 }
 
 message RecoveryChannel {

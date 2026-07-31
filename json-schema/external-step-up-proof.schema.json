@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cliptown.app/schemas/external-step-up-proof.schema.json",
+  "title": "ClipTown External Step-Up Proof",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "proof_id",
+    "issuer",
+    "subject",
+    "audience",
+    "device_id",
+    "challenge_id",
+    "action",
+    "issued_at",
+    "expires_at",
+    "signing_key_id",
+    "signature"
+  ],
+  "properties": {
+    "protocol_version": {"type": "integer", "const": 1},
+    "proof_id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$"},
+    "issuer": {"type": "string", "minLength": 1, "maxLength": 256},
+    "subject": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$"},
+    "audience": {"type": "string", "const": "cliptown"},
+    "device_id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$"},
+    "challenge_id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$"},
+    "action": {
+      "type": "string",
+      "enum": [
+        "enroll_device",
+        "revoke_device",
+        "update_security_settings",
+        "change_recovery_channel",
+        "export_app_vault",
+        "recover_account"
+      ]
+    },
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "signing_key_id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$"},
+    "signature": {"type": "string", "contentEncoding": "base64", "minLength": 43, "maxLength": 684}
+  }
+}
