@@ -12,7 +12,7 @@ Versioned contracts shared by the ClipTown API, Flutter app, browser extension, 
 - `json-schema/*.schema.json` are runtime validation contracts for browser/Flutter boundaries.
 - `json-schema/memebank-clipboard-v1.schema.json` is the additive compatibility subset ClipTown may retain when Memebank explicitly exports an image. The canonical schema remains owned by `memebank/mb-interfaces`.
 - `generated/` contains reviewable Rust, TypeScript, and Dart model snapshots. CI validates all three languages.
-- Clipboard plaintext, encryption keys, OTP seeds/codes, PINs, voiceprints, biometric templates, private Signal state, access/refresh tokens, sibling-device service credentials, cloud credentials, and signed upload URLs are never part of a server storage contract or companion-app clipboard metadata.
+- Clipboard plaintext, encryption keys, OTP seeds/codes, PINs, voiceprints, biometric templates, private Signal state, access/refresh or other bearer tokens, sibling-device service credentials, cloud credentials, and signed upload URLs are never part of a server storage contract or companion-app clipboard metadata.
 
 ## Companion metadata policy
 
