@@ -9,3 +9,6 @@ rules:
   operation-tags: warn
   oas3-api-servers: warn
   tag-description: off
+  # Upstream stoplightio/spectral#2959/#2963 crashes on null nodes before
+  # evaluating enums. CI replaces only this rule with our deterministic guard.
+  duplicated-entry-in-enum: off

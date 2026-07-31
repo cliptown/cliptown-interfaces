@@ -1,4 +1,6 @@
+export * from './app_vault.js';
 export * from './security.js';
+export * from './step_up.js';
 
 export type ClipKind = 'text' | 'html' | 'rtf' | 'image' | 'file' | 'file_list' | 'url' | 'color' | 'json';
 export type SearchPrivacyMode = 'local_only' | 'blind_index' | 'opt_in_vector';

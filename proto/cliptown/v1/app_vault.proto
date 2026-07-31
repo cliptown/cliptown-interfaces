@@ -1,0 +1,56 @@
+syntax = "proto3";
+package cliptown.v1;
+
+import "google/protobuf/timestamp.proto";
+import "cliptown/v1/common.proto";
+
+// A ciphertext-only record for product data that must never enter clipboard
+// history, search, RAG, preview, paste, pinning, or clipboard export flows.
+message AppVaultMutation {
+  uint32 protocol_version = 1;
+  string mutation_id = 2;
+  string app_id = 3;
+  string namespace = 4;
+  // Random id or account-keyed digest. Never a provider/account label.
+  string opaque_record_id = 5;
+  // Present for a live record and absent for a deletion tombstone.
+  CipherEnvelope payload = 6;
+  bool deleted = 7;
+  string source_device_id = 8;
+  uint64 logical_clock = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  // Signature over canonical metadata plus payload bytes/hash.
+  bytes device_signature = 12;
+}
+
+message AppVaultCursor {
+  uint64 server_sequence = 1;
+}
+
+message AppVaultChange {
+  uint64 server_sequence = 1;
+  AppVaultMutation mutation = 2;
+}
+
+message AppVaultPushRequest {
+  repeated AppVaultMutation mutations = 1;
+  AppVaultCursor base = 2;
+}
+
+message AppVaultPushResult {
+  repeated AppVaultMutation accepted = 1;
+  repeated string rejected_mutation_ids = 2;
+  AppVaultCursor cursor = 3;
+}
+
+message AppVaultPullRequest {
+  AppVaultCursor after = 1;
+  uint32 limit = 2;
+}
+
+message AppVaultPullResult {
+  repeated AppVaultChange changes = 1;
+  AppVaultCursor cursor = 2;
+  bool has_more = 3;
+}

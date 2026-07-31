@@ -6,7 +6,8 @@ export type SignalEnvelopePurpose =
   | 'object_key'
   | 'device_control'
   | 'recovery_package'
-  | 'acknowledgement';
+  | 'acknowledgement'
+  | 'app_vault_key';
 
 export interface PinKdfPolicy {
   algorithm: 'argon2id-v1' | 'scrypt-v1';
