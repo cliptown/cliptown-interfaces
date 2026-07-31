@@ -145,8 +145,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AppVaultPushResponse' }
-        '401': { description: primary or device authentication is invalid }
-        '403': { description: device is pending, suspended, revoked, or not authorized for the app id }
+        '401':
+          description: primary or device authentication is invalid
+        '403':
+          description: device is pending, suspended, revoked, or not authorized for the app id
   /v1/app-vault/{appId}/sync/pull:
     parameters:
       - in: path
@@ -174,8 +176,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AppVaultPullResponse' }
-        '401': { description: primary or device authentication is invalid }
-        '403': { description: device is pending, suspended, revoked, or not authorized for the app id }
+        '401':
+          description: primary or device authentication is invalid
+        '403':
+          description: device is pending, suspended, revoked, or not authorized for the app id
   /v1/search:
     post:
       description: Searches blind indexes or explicitly opted-in vectors. Plaintext queries are never accepted.
