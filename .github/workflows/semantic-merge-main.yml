@@ -1,0 +1,61 @@
+name: semantic-merge-main
+
+on:
+  push:
+    branches:
+      - agent/den-44-threefa-cliptown-bridge
+
+permissions:
+  contents: write
+
+jobs:
+  merge-main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge main while preserving reviewed contract semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          branch="${GITHUB_REF_NAME}"
+          cp README.md /tmp/README.semantic.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+
+          if ! git merge --no-ff --no-commit origin/main; then
+            # README.md is the only conceptual overlap: main added the Memebank
+            # clipboard compatibility policy while this branch added isolated 3FA
+            # app-vault contracts. Restore the reviewed union of both designs.
+            cp /tmp/README.semantic.md README.md
+            git add README.md
+
+            # Both branches add the same canonical Memebank compatibility schema.
+            # Keep the branch copy only after verifying byte-for-byte equality.
+            if git ls-files -u -- json-schema/memebank-clipboard-v1.schema.json | grep -q .; then
+              git show :2:json-schema/memebank-clipboard-v1.schema.json > /tmp/memebank.ours.json
+              git show :3:json-schema/memebank-clipboard-v1.schema.json > /tmp/memebank.theirs.json
+              cmp /tmp/memebank.ours.json /tmp/memebank.theirs.json
+              cp /tmp/memebank.ours.json json-schema/memebank-clipboard-v1.schema.json
+              git add json-schema/memebank-clipboard-v1.schema.json
+            fi
+
+            unresolved="$(git diff --name-only --diff-filter=U)"
+            if [[ -n "${unresolved}" ]]; then
+              echo "Unexpected unresolved paths:" >&2
+              echo "${unresolved}" >&2
+              exit 1
+            fi
+          fi
+
+          # These workflows are one-shot merge plumbing, not product CI.
+          rm -f .github/workflows/branch-tree-probe.yml
+          rm -f .github/workflows/semantic-merge-main.yml
+          git add -A
+
+          git commit -m "Merge main semantically into 3FA app-vault contracts"
+          git push origin "HEAD:${branch}"
