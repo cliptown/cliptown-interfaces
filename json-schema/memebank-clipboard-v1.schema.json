@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.memebank.app/clipboard/v1",
+  "title": "Memebank clipboard metadata v1",
+  "description": "Optional provenance metadata accompanying standard image, file, or text clipboard representations exported explicitly by Memebank. The canonical contract is owned by memebank/mb-interfaces; this compatibility schema defines the subset ClipTown may retain.",
+  "type": "object",
+  "required": [
+    "schema",
+    "assetId",
+    "mediaType",
+    "source"
+  ],
+  "properties": {
+    "schema": {
+      "const": "memebank.clipboard/v1"
+    },
+    "assetId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "mediaType": {
+      "type": "string",
+      "pattern": "^image/"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[A-Fa-f0-9]{64}$"
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "source": {
+      "const": "memebank"
+    },
+    "deepLink": {
+      "type": "string",
+      "pattern": "^memebank://assets/[0-9A-Fa-f-]{36}$"
+    },
+    "shareUrl": {
+      "type": "string",
+      "format": "uri"
+    }
+  },
+  "additionalProperties": true
+}
