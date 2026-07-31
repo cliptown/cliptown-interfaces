@@ -1,6 +1,6 @@
 # cliptown-interfaces
 
-Versioned contracts shared by the ClipTown API, Flutter app, browser extension, CLI, SDKs, and isolated product application vaults.
+Versioned contracts shared by the ClipTown API, Flutter app, browser extension, CLI, SDKs, companion applications, and isolated product application vaults.
 
 ## Contract rules
 
@@ -10,8 +10,15 @@ Versioned contracts shared by the ClipTown API, Flutter app, browser extension, 
 - `proto/cliptown/v1/encrypted_object.proto` defines chunked encrypted file/object manifests and recipient-specific wrapped content keys for Cloudflare R2 or compatible object stores.
 - `openapi/cliptown.openapi.yaml` is the HTTP contract exposed by the Rust backend.
 - `json-schema/*.schema.json` are runtime validation contracts for browser/Flutter boundaries.
+- `json-schema/memebank-clipboard-v1.schema.json` is the additive compatibility subset ClipTown may retain when Memebank explicitly exports an image. The canonical schema remains owned by `memebank/mb-interfaces`.
 - `generated/` contains reviewable Rust, TypeScript, and Dart model snapshots. CI validates all three languages.
-- Clipboard plaintext, encryption keys, OTP seeds/codes, PINs, voiceprints, biometric templates, private Signal state, access/refresh tokens, and sibling-device service credentials are never part of a server storage contract.
+- Clipboard plaintext, encryption keys, OTP seeds/codes, PINs, voiceprints, biometric templates, private Signal state, access/refresh tokens, sibling-device service credentials, cloud credentials, and signed upload URLs are never part of a server storage contract or companion-app clipboard metadata.
+
+## Companion metadata policy
+
+Companion metadata never replaces a standard clipboard representation. A Memebank-aware clipboard write should still include image bytes, a safe temporary file reference, or user-authorized text so ClipTown remains usable without network access or a live Memebank session. Unknown additive fields are retained only when permitted by the user's normal ClipTown policy; unsupported major schema versions are not interpreted.
+
+Companion clipboard metadata and isolated application-vault records are different trust domains. Companion metadata may accompany an explicit user clipboard export; application-vault records are opaque ciphertext and are never interpreted, indexed, previewed, pasted, retained, or exported as clipboard content.
 
 ## 3FA reciprocal integration
 
