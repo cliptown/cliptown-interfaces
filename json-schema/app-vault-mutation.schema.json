@@ -44,9 +44,17 @@
   },
   "allOf": [
     {
-      "if": {"properties": {"deleted": {"const": true}}, "required": ["deleted"]},
-      "then": {"not": {"required": ["payload"]}},
-      "else": {"required": ["payload"]}
+      "if": {
+        "properties": {"deleted": {"const": true}},
+        "required": ["deleted"]
+      },
+      "then": {
+        "properties": {"payload": false}
+      },
+      "else": {
+        "properties": {"payload": true},
+        "required": ["payload"]
+      }
     }
   ]
 }
