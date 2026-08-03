@@ -1,0 +1,384 @@
+openapi: 3.1.0
+info:
+  title: ClipTown MemeBank Integration API
+  version: 1.0.0
+  description: >-
+    API-first, ciphertext-only transfer contract between MemeBank and ClipTown.
+    The integration never requires both mobile applications to be installed,
+    never probes local app presence, and never uses deep links, local IPC, or the
+    clipboard as the product-to-product transport. Native clipboard export remains
+    a separate user feature.
+servers:
+  - url: https://api.cliptown.app
+security:
+  - sharedAuthDelegatedBearer: []
+tags:
+  - name: MemeBank integration
+    description: User-bound transfer queue addressed through shared-auth delegation.
+paths:
+  /v1/integrations/memebank/transfers:
+    post:
+      tags: [MemeBank integration]
+      operationId: createMemeBankTransfer
+      summary: Create an encrypted MemeBank/ClipTown transfer
+      description: >-
+        Creates an idempotent transfer owned by the delegated shared-auth subject.
+        The server stores opaque ciphertext and bounded routing/integrity metadata;
+        it never receives plaintext content, encryption keys, provider credentials,
+        bearer tokens, signed object URLs, OTP material, or app-install state.
+      x-required-scope: cliptown:memebank:write
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransferRequest'
+      responses:
+        '200':
+          description: Existing idempotent transfer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfer'
+        '201':
+          description: Transfer created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Idempotency key was reused with a different request digest
+        '413':
+          description: Request exceeds the configured encrypted payload limit
+        '422':
+          description: Contract version or encrypted-envelope validation failed
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    get:
+      tags: [MemeBank integration]
+      operationId: listMemeBankTransfers
+      summary: List encrypted transfers for the delegated subject
+      description: >-
+        Returns only transfers owned by the authenticated subject. Cursors are
+        opaque and cannot be used to enumerate another account.
+      x-required-scope: cliptown:memebank:read
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - in: query
+          name: direction
+          schema:
+            $ref: '#/components/schemas/TransferDirection'
+        - in: query
+          name: state
+          schema:
+            $ref: '#/components/schemas/TransferState'
+      responses:
+        '200':
+          description: Page of subject-owned encrypted transfers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/integrations/memebank/transfers/{transferId}:
+    parameters:
+      - $ref: '#/components/parameters/TransferId'
+    get:
+      tags: [MemeBank integration]
+      operationId: getMemeBankTransfer
+      summary: Read one encrypted transfer
+      x-required-scope: cliptown:memebank:read
+      responses:
+        '200':
+          description: Subject-owned transfer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfer'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Transfer is absent or not owned by this subject
+    delete:
+      tags: [MemeBank integration]
+      operationId: cancelMemeBankTransfer
+      summary: Cancel a pending transfer
+      description: >-
+        Requires recent LOA2 according to shared-auth delegation policy. The API
+        returns the same not-found behavior for absent and cross-subject records.
+      x-required-scope: cliptown:memebank:delete
+      responses:
+        '204':
+          description: Cancelled or already terminal
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Transfer is absent or not owned by this subject
+  /v1/integrations/memebank/transfers/{transferId}/ack:
+    parameters:
+      - $ref: '#/components/parameters/TransferId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+    post:
+      tags: [MemeBank integration]
+      operationId: acknowledgeMemeBankTransfer
+      summary: Acknowledge import, ignore, or rejection of a transfer
+      description: >-
+        Acknowledgement is idempotent and subject-bound. It never returns or logs
+        decrypted payload content.
+      x-required-scope: cliptown:memebank:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcknowledgeTransferRequest'
+      responses:
+        '200':
+          description: Current transfer state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfer'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Transfer is absent or not owned by this subject
+        '409':
+          description: Idempotency key was reused with a different acknowledgement
+components:
+  securitySchemes:
+    sharedAuthDelegatedBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        Short-lived ES256 shared-auth token with aud=cliptown-api,
+        azp=memebank-api, an active revocation-aware session id, and an exact
+        cliptown:memebank:* scope. Write/delete grants may require recent LOA2.
+        A 3FA-specific proof or mobile-app installation state is not accepted.
+  parameters:
+    TransferId:
+      in: path
+      name: transferId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 128
+        pattern: '^[A-Za-z0-9._:-]+$'
+    Cursor:
+      in: query
+      name: cursor
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 512
+    Limit:
+      in: query
+      name: limit
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+  responses:
+    BadRequest:
+      description: Malformed request
+    Unauthorized:
+      description: Missing, invalid, expired, wrong-audience, or revoked delegated token
+    Forbidden:
+      description: Required scope, authorized party, role, ownership, or assurance is absent
+    Unavailable:
+      description: Integration storage or revocation authority is unavailable
+  schemas:
+    TransferDirection:
+      type: string
+      enum:
+        - memebank_to_cliptown
+        - cliptown_to_memebank
+    TransferState:
+      type: string
+      enum:
+        - pending
+        - acknowledged
+        - ignored
+        - rejected
+        - expired
+        - cancelled
+    CipherEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - algorithm
+        - nonce
+        - ciphertext
+        - key_id
+      properties:
+        algorithm:
+          type: string
+          enum:
+            - xchacha20poly1305-v1
+            - aes-256-gcm-v1
+        nonce:
+          type: string
+          contentEncoding: base64
+          minLength: 16
+          maxLength: 128
+        ciphertext:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 22369624
+          description: At most 16 MiB of decoded ciphertext; larger objects use the reviewed encrypted-object API.
+        associated_data_hash:
+          type:
+            - string
+            - 'null'
+          contentEncoding: base64
+          maxLength: 128
+        key_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+    CreateTransferRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - contract_version
+        - direction
+        - source_item_id
+        - media_type
+        - content_sha256
+        - content_length
+        - payload
+        - expires_at
+      properties:
+        contract_version:
+          type: integer
+          const: 1
+        direction:
+          $ref: '#/components/schemas/TransferDirection'
+        source_item_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+          description: Opaque source identifier; not a deep link or storage URL.
+        media_type:
+          type: string
+          minLength: 3
+          maxLength: 128
+          pattern: '^[A-Za-z0-9.+-]+/[A-Za-z0-9.+-]+$'
+        content_sha256:
+          type: string
+          minLength: 43
+          maxLength: 44
+          pattern: '^[A-Za-z0-9_-]{43}=?$'
+        content_length:
+          type: integer
+          minimum: 0
+          maximum: 16777216
+        payload:
+          $ref: '#/components/schemas/CipherEnvelope'
+        encrypted_metadata:
+          oneOf:
+            - $ref: '#/components/schemas/CipherEnvelope'
+            - type: 'null'
+        expires_at:
+          type: string
+          format: date-time
+          description: Must be within the server's bounded transfer-retention window.
+    Transfer:
+      allOf:
+        - $ref: '#/components/schemas/CreateTransferRequest'
+        - type: object
+          additionalProperties: false
+          required:
+            - transfer_id
+            - state
+            - created_at
+            - updated_at
+          properties:
+            transfer_id:
+              type: string
+              format: uuid
+            state:
+              $ref: '#/components/schemas/TransferState'
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+            acknowledged_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+    TransferPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - next_cursor
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/Transfer'
+        next_cursor:
+          type:
+            - string
+            - 'null'
+          maxLength: 512
+    AcknowledgeTransferRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - contract_version
+        - disposition
+        - client_receipt_id
+      properties:
+        contract_version:
+          type: integer
+          const: 1
+        disposition:
+          type: string
+          enum:
+            - acknowledged
+            - ignored
+            - rejected
+        client_receipt_id:
+          type: string
+          minLength: 16
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
