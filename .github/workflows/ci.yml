@@ -34,14 +34,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: python3 scripts/check-openapi-enum-duplicates.py openapi/cliptown.openapi.yaml
+      - name: Reject duplicate enum values
+        run: |
+          for specification in openapi/*.yaml; do
+            python3 scripts/check-openapi-enum-duplicates.py "$specification"
+          done
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - name: Install pinned Spectral 6.15.0
         run: npm install --global @stoplight/spectral-cli@6.15.0
       - name: Verify pinned Spectral version
         run: test "$(spectral --version)" = "6.15.0"
-      - run: spectral lint openapi/cliptown.openapi.yaml
+      - name: Lint every OpenAPI contract
+        run: spectral lint openapi/*.yaml
 
   json-schema:
     runs-on: ubuntu-latest
