@@ -306,6 +306,7 @@ components:
           type: integer
           minimum: 0
           maximum: 16777216
+          description: Source/plaintext byte length before encryption; it is independent from AEAD ciphertext expansion.
         payload:
           $ref: '#/components/schemas/CipherEnvelope'
         encrypted_metadata:
@@ -317,10 +318,10 @@ components:
           format: date-time
           description: Must be within the server's bounded transfer-retention window.
     Transfer:
+      unevaluatedProperties: false
       allOf:
         - $ref: '#/components/schemas/CreateTransferRequest'
         - type: object
-          additionalProperties: false
           required:
             - transfer_id
             - state
