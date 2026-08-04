@@ -1,19 +1,24 @@
 name: interfaces-ci
+
 on:
   pull_request:
   push:
     branches: [main]
+
 permissions:
   contents: read
+
 jobs:
   protobuf-wire:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+          persist-credentials: false
+          show-progress: false
       - name: Set up Buf 1.72.0
-        uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # v1
+        uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99
         with:
           version: "1.72.0"
       - name: Verify pinned Buf version
@@ -31,12 +36,16 @@ jobs:
       - run: python3 scripts/check-wire-contract.py
 
   openapi:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          show-progress: false
       - run: python3 scripts/check-openapi-enum-duplicates.py openapi/cliptown.openapi.yaml
-      - uses: actions/setup-node@v4
-        with: { node-version: 22 }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
       - name: Install pinned Spectral 6.15.0
         run: npm install --global @stoplight/spectral-cli@6.15.0
       - name: Verify pinned Spectral version
@@ -44,11 +53,15 @@ jobs:
       - run: spectral lint openapi/cliptown.openapi.yaml
 
   json-schema:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22 }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          show-progress: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
       - name: Compile JSON Schemas with pinned validators
         run: |
           for schema in json-schema/*.schema.json; do
@@ -56,11 +69,15 @@ jobs:
           done
 
   generated-rust:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          persist-credentials: false
+          show-progress: false
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30
+        with:
+          toolchain: "1.88.0"
           components: rustfmt, clippy
       - run: test "$(rustc --version | awk '{print $2}')" = "1.88.0"
       - run: cargo fmt --manifest-path generated/rust/Cargo.toml --check
@@ -68,23 +85,30 @@ jobs:
       - run: cargo test --manifest-path generated/rust/Cargo.toml
 
   generated-typescript:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22 }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          show-progress: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
       - working-directory: generated/typescript
         run: npm install
       - working-directory: generated/typescript
         run: npm run typecheck && npm run build
 
   generated-dart:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          sdk: 3.12.2
+          persist-credentials: false
+          show-progress: false
+      - uses: dart-lang/setup-dart@7654d458321ee25acccccfdb86cd48bd95768ff1
+        with:
+          sdk: "3.12.2"
       - name: Verify pinned Dart version
         run: |
           dart --version 2>&1 | grep -F 'Dart SDK version: 3.12.2'
