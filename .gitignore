@@ -7,3 +7,7 @@
 dist/
 node_modules/
 target/
+
+# zed-pkg local state
+/zed_modules/
+/.zed/pack/
