@@ -16,6 +16,10 @@ tag_format = "v{version}"
 smoke_test = "test -d \"$ZED_PKG_TEST_TARGET/proto/cliptown/v1\" && test -f \"$ZED_PKG_TEST_TARGET/openapi/cliptown.openapi.yaml\""
 exclude = [".env", ".env.*", ".direnv/**", ".zed/**", ".zed-pack/**", "tmp/**", "**/*.log", ".DS_Store", "**/target/**", "**/node_modules/**", "**/.dart_tool/**"]
 
+[targets.repository]
+dir = "."
+name = "cliptown-interfaces-repository"
+
 [targets.rust]
 dir = "generated/rust"
 adapter = "rust"
