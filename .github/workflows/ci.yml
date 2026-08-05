@@ -21,6 +21,7 @@ jobs:
         uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99
         with:
           version: "1.72.0"
+          github_token: ${{ github.token }}
       - name: Verify pinned Buf version
         run: test "$(buf --version)" = "1.72.0"
       - run: buf lint
