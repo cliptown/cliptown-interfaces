@@ -1,0 +1,47 @@
+name: MemeBank integration contract
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: memebank-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          show-progress: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+      - name: Reject duplicate enum values
+        run: python3 scripts/check-openapi-enum-duplicates.py openapi/memebank-integration.openapi.yaml
+      - name: Install pinned Spectral 6.15.0
+        run: npm install --global @stoplight/spectral-cli@6.15.0
+      - name: Verify pinned Spectral version
+        run: test "$(spectral --version)" = "6.15.0"
+      - name: Lint MemeBank OpenAPI
+        run: spectral lint openapi/memebank-integration.openapi.yaml
+      - name: Compile runtime schema
+        run: npx --yes --package ajv-cli@5.0.0 --package ajv-formats@3.0.1 ajv compile --spec=draft2020 -c ajv-formats -s json-schema/memebank-api-transfer-v1.schema.json --strict=true
+      - name: Enforce API-only product boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'aud=cliptown-api' openapi/memebank-integration.openapi.yaml
+          grep -F 'azp=memebank-api' openapi/memebank-integration.openapi.yaml
+          grep -F 'cliptown:memebank:read' openapi/memebank-integration.openapi.yaml
+          grep -F 'cliptown:memebank:write' openapi/memebank-integration.openapi.yaml
+          grep -F 'cliptown:memebank:delete' openapi/memebank-integration.openapi.yaml
+          grep -F 'It is not an app-to-app mobile bridge.' docs/memebank-api-interoperability.md
