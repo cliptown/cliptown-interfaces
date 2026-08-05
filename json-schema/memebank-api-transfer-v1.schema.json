@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cliptown.app/schema/memebank-api-transfer-v1.schema.json",
+  "title": "ClipTown MemeBank API transfer v1",
+  "description": "Ciphertext-only API transfer. It is independent of mobile app installation, deep links, local IPC, and clipboard monitoring.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "direction",
+    "source_item_id",
+    "media_type",
+    "content_sha256",
+    "content_length",
+    "payload",
+    "expires_at"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": 1
+    },
+    "direction": {
+      "enum": [
+        "memebank_to_cliptown",
+        "cliptown_to_memebank"
+      ]
+    },
+    "source_item_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "media_type": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9.+-]+/[A-Za-z0-9.+-]+$"
+    },
+    "content_sha256": {
+      "type": "string",
+      "minLength": 43,
+      "maxLength": 44,
+      "pattern": "^[A-Za-z0-9_-]{43}=?$"
+    },
+    "content_length": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 16777216
+    },
+    "payload": {
+      "$ref": "#/$defs/cipherEnvelope"
+    },
+    "encrypted_metadata": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/cipherEnvelope"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "cipherEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "nonce",
+        "ciphertext",
+        "key_id"
+      ],
+      "properties": {
+        "algorithm": {
+          "enum": [
+            "xchacha20poly1305-v1",
+            "aes-256-gcm-v1"
+          ]
+        },
+        "nonce": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 128,
+          "contentEncoding": "base64"
+        },
+        "ciphertext": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 22369624,
+          "contentEncoding": "base64"
+        },
+        "associated_data_hash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128,
+          "contentEncoding": "base64"
+        },
+        "key_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        }
+      }
+    }
+  }
+}
