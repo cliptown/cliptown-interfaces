@@ -7,6 +7,8 @@
 dist/
 node_modules/
 target/
+/Cargo.lock
+/generated/dart/pubspec.lock
 
 # zed-pkg local state
 /zed_modules/
