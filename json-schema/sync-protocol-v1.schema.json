@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cliptown.dev/schemas/sync-protocol-v1.schema.json",
+  "title": "ClipTown Sync Protocol v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol_version", "tenant_id", "client_id", "request_id", "cursor", "mutations"],
+  "properties": {
+    "protocol_version": {"const": 1},
+    "tenant_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "client_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "request_id": {"type": "string", "minLength": 16, "maxLength": 128},
+    "cursor": {"type": "integer", "minimum": 0},
+    "has_more": {"type": "boolean"},
+    "mutations": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {"$ref": "#/$defs/mutation"}
+    },
+    "events": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {"$ref": "#/$defs/event"}
+    }
+  },
+  "$defs": {
+    "logicalClock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["physical_ms", "logical"],
+      "properties": {
+        "physical_ms": {"type": "integer", "minimum": 0},
+        "logical": {"type": "integer", "minimum": 0}
+      }
+    },
+    "mutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mutation_id", "device_id", "clock", "kind", "entity_id", "payload_digest"],
+      "properties": {
+        "mutation_id": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+        "device_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "server_sequence": {"type": ["integer", "null"], "minimum": 0},
+        "clock": {"$ref": "#/$defs/logicalClock"},
+        "kind": {"enum": ["upsert", "delete", "pin", "attachment_manifest", "device_revocation", "key_rotation"]},
+        "entity_id": {"type": "string", "minLength": 1, "maxLength": 256},
+        "payload_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "idempotency_key": {"type": "string", "minLength": 16, "maxLength": 128}
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["server_sequence", "kind", "entity_id"],
+      "properties": {
+        "server_sequence": {"type": "integer", "minimum": 1},
+        "kind": {"enum": ["upsert", "delete", "pin", "attachment_manifest", "device_revocation", "key_rotation"]},
+        "entity_id": {"type": "string", "minLength": 1, "maxLength": 256},
+        "payload_digest": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "clock": {"$ref": "#/$defs/logicalClock"},
+        "device_id": {"type": "string", "minLength": 1, "maxLength": 128}
+      }
+    }
+  }
+}
