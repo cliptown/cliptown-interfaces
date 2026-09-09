@@ -16,6 +16,7 @@
     },
     "RequestMeta": {
       "type": "object",
+      "additionalProperties": false,
       "unevaluatedProperties": {"not": {}},
       "required": ["requestId", "traceId"],
       "properties": {
@@ -26,6 +27,7 @@
     },
     "PageQuery": {
       "type": "object",
+      "additionalProperties": false,
       "unevaluatedProperties": {"not": {}},
       "required": ["limit"],
       "properties": {
@@ -35,6 +37,7 @@
     },
     "ProblemDetails": {
       "type": "object",
+      "additionalProperties": false,
       "unevaluatedProperties": {"not": {}},
       "required": ["type", "title", "status", "requestId"],
       "properties": {
