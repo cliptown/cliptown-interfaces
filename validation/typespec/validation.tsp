@@ -19,4 +19,11 @@ model ProblemDetails {
   @minLength(1) @maxLength(128) requestId: string;
 }
 
-alias PublicValidationContract = RequestMeta | PageQuery | ProblemDetails;
+// A named union is a first-class contract declaration. Keep it independent
+// from the authored JSON Schema while allowing TJSV to compare declaration
+// inventory and generated union semantics without special ignore policy.
+union PublicValidationContract {
+  requestMeta: RequestMeta,
+  pageQuery: PageQuery,
+  problemDetails: ProblemDetails,
+}
