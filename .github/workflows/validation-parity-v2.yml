@@ -16,21 +16,61 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: validation-parity-v2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   parity:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Check out exact head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+          show-progress: false
+
+      - name: Verify exact revision and clean conflict state
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          git diff --check
+          status=0
+          git grep -n -I -E '^(<<<<<<< .+|=======|>>>>>>> .+)$' -- . || status=$?
+          test "$status" -eq 1
+
+      - name: Set up tested Node runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22.16.0"
+
+      - name: Compare independent TypeSpec and JSON Schema authorities
+        uses: ORESoftware/typespec-json-schema-validator@2281843126ab644607b11cf8281d84f382d68dfc
+        with:
+          typespec: validation/typespec/validation.tsp
+          schema: validation/public-contracts.v1.json
+          report: .typespec-json-schema-validator/validation/report.json
+          sarif: .typespec-json-schema-validator/validation/report.sarif
+          contract_ir: .typespec-json-schema-validator/validation/contract-ir.json
+          output_dir: .typespec-json-schema-validator/validation/generated
+          max_probes: "96"
+
+      - name: Check out pinned route/parity authority
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ORESoftware/api-docs
           ref: c75c3924847a42d8d2854eb78c85f330ea726bef
           path: .deps/api-docs
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: "22.16.0"
-      - run: node .deps/api-docs/tools/validation-parity/parity-tool.mjs --self-test
-      - run: node .deps/api-docs/tools/validation-parity/parity-tool.mjs --check
+          show-progress: false
+
+      - name: Self-test route parity tool
+        run: node .deps/api-docs/tools/validation-parity/parity-tool.mjs --self-test
+
+      - name: Enforce route and generated-language parity
+        run: node .deps/api-docs/tools/validation-parity/parity-tool.mjs --check
