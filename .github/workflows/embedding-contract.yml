@@ -33,15 +33,20 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/tjsv"
+          set +e
           npx --yes --package=@oresoftware/typespec-json-schema-validator@0.1.0 tjsv check \
             --typespec=embedding-contract/embeddings.tsp \
             --schema=embedding-contract/embedding-record.schema.json \
-            --report="$RUNNER_TEMP/tjsv/embedding-contract-report.json"
-      - name: Retain TJSV report
+            --report="$RUNNER_TEMP/tjsv/embedding-contract-report.json" \
+            2>&1 | tee "$RUNNER_TEMP/tjsv/tjsv.log"
+          status=${PIPESTATUS[0]}
+          set -e
+          exit "$status"
+      - name: Retain TJSV evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: cliptown-embedding-tjsv-report
-          path: ${{ runner.temp }}/tjsv/embedding-contract-report.json
-          if-no-files-found: warn
+          name: cliptown-embedding-tjsv-evidence
+          path: ${{ runner.temp }}/tjsv/
+          if-no-files-found: error
           retention-days: 30
