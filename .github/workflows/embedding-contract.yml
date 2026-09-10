@@ -29,6 +29,13 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22.16.0
+      - name: Bootstrap immutable TJSV toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --prefix .ci/tjsv
+          npm rebuild --prefix .ci/tjsv @oresoftware/f2e --foreground-scripts
+          node .ci/tjsv/bin/typespec-json-schema-validator.mjs doctor --quiet
       - name: Verify cross-artifact invariants
         run: node scripts/verify-embedding-contract.mjs
       - name: Run interface regression tests
@@ -36,19 +43,26 @@ jobs:
       - name: Compile Microsoft TypeSpec
         run: npx --yes --package @typespec/compiler@1.15.0 tsp compile embedding-contract/embeddings.tsp --no-emit
       - name: Enforce TypeSpec / JSON Schema peer-authority convergence
-        uses: ./.ci/tjsv
-        with:
-          typespec: embedding-contract/embeddings.tsp
-          schema: embedding-contract/embedding-record.schema.json
-          report: .typespec-json-schema-validator/embedding-contract-report.json
-          output_dir: .typespec-json-schema-validator/generated
-          sarif: .typespec-json-schema-validator/embedding-contract-report.sarif
-          quiet: false
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .typespec-json-schema-validator/generated
+          set +e
+          node .ci/tjsv/bin/typespec-json-schema-validator.mjs check \
+            --typespec=embedding-contract/embeddings.tsp \
+            --schema=embedding-contract/embedding-record.schema.json \
+            --report=.typespec-json-schema-validator/embedding-contract-report.json \
+            --sarif=.typespec-json-schema-validator/embedding-contract-report.sarif \
+            --output-dir=.typespec-json-schema-validator/generated \
+            2>&1 | tee .typespec-json-schema-validator/tjsv.log
+          status=${PIPESTATUS[0]}
+          set -e
+          exit "$status"
       - name: Retain TJSV evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: cliptown-embedding-tjsv-evidence
           path: .typespec-json-schema-validator/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
