@@ -13,13 +13,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out exact revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          node-version: 22
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.16.0
       - name: Verify cross-artifact invariants
         run: node scripts/verify-embedding-contract.mjs
       - name: Run interface regression tests
         run: node --test tests/embedding-contract-regression.test.mjs
       - name: Compile Microsoft TypeSpec
         run: npx --yes --package @typespec/compiler@1.15.0 tsp compile embedding-contract/embeddings.tsp --no-emit
+      - name: Enforce TypeSpec / JSON Schema peer-authority convergence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/tjsv"
+          npx --yes --package=@oresoftware/typespec-json-schema-validator@0.1.0 tjsv check \
+            --typespec=embedding-contract/embeddings.tsp \
+            --schema=embedding-contract/embedding-record.schema.json \
+            --report="$RUNNER_TEMP/tjsv/embedding-contract-report.json"
+      - name: Retain TJSV report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cliptown-embedding-tjsv-report
+          path: ${{ runner.temp }}/tjsv/embedding-contract-report.json
+          if-no-files-found: warn
+          retention-days: 30
