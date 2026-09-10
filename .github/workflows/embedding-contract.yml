@@ -46,15 +46,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p .typespec-json-schema-validator/generated
+          mkdir -p tjsv-evidence/generated
           set +e
           node .ci/tjsv/bin/typespec-json-schema-validator.mjs check \
             --typespec=embedding-contract/embeddings.tsp \
             --schema=embedding-contract/embedding-record.schema.json \
-            --report=.typespec-json-schema-validator/embedding-contract-report.json \
-            --sarif=.typespec-json-schema-validator/embedding-contract-report.sarif \
-            --output-dir=.typespec-json-schema-validator/generated \
-            2>&1 | tee .typespec-json-schema-validator/tjsv.log
+            --report=tjsv-evidence/embedding-contract-report.json \
+            --sarif=tjsv-evidence/embedding-contract-report.sarif \
+            --output-dir=tjsv-evidence/generated \
+            2>&1 | tee tjsv-evidence/tjsv.log
           status=${PIPESTATUS[0]}
           set -e
           exit "$status"
@@ -63,6 +63,6 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: cliptown-embedding-tjsv-evidence
-          path: .typespec-json-schema-validator/
+          path: tjsv-evidence/
           if-no-files-found: error
           retention-days: 30
