@@ -1,19 +1,39 @@
-
 *.log
 .DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Environment and decrypted secret material are local-only. Ciphertext under
+# env/enc may be tracked; plaintext dotenv files and age identities may not.
+.env
+.env.*
+*.env
+**/*.env
+!.env.example
+!**/.env.example
+env/dec/
+*.agekey
+*.age-key
+keys.txt
+sops-private*.txt
+.direnv/
+
+# Language and build output.
 .dart_tool/
 .idea/
 .vscode/
 dist/
+.cache/
+coverage/
 node_modules/
 target/
 /Cargo.lock
 /generated/dart/pubspec.lock
+*.tsbuildinfo
 
-# zed-pkg local state
+# zed-pkg local state and scratch/worktree roots.
 /zed_modules/
 /.zed/pack/
-tmp
-temp
-tmp/worktrees
-temp/worktrees
+tmp/
+temp/

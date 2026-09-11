@@ -11,6 +11,7 @@ Versioned contracts shared by the ClipTown API, Flutter app, browser extension, 
 - `openapi/cliptown.openapi.yaml` is the primary ClipTown HTTP contract exposed by the Rust backend.
 - `openapi/memebank-integration.openapi.yaml` is the API-first MemeBank transfer contract. It is independent of mobile app installation, deep links, local IPC, and clipboard monitoring.
 - `json-schema/*.schema.json` are runtime validation contracts for browser, Flutter, API, and SDK boundaries.
+- `json-schema/proximity-*.schema.json` define rotating BLE discovery metadata and signed, recipient-bound, replay-safe encrypted proximity envelopes. Bluetooth is a transport and never an authentication factor.
 - `json-schema/memebank-api-transfer-v1.schema.json` validates ciphertext-only MemeBank API transfer requests.
 - `json-schema/memebank-clipboard-v1.schema.json` is only an additive local clipboard compatibility subset when MemeBank explicitly copies an image. The canonical clipboard schema remains owned by `memebank/mb-interfaces`, and it is not the product-integration transport.
 - `generated/` contains reviewable Rust, TypeScript, and Dart model snapshots. CI validates all three languages.
@@ -39,6 +40,8 @@ Companion clipboard metadata and isolated application-vault records are differen
 MemeBank routes do not accept `X-3FA-Step-Up`, a 3FA bearer, a 3FA app-presence signal, or direct factor-app callbacks. They accept only shared-auth delegated tokens and evaluate normalized assurance plus product authorization. Shared-auth/Supabase remains the primary identity source, and every ClipTown installation receives its own independently revocable service-local credential.
 
 See [`docs/3fa-app-vault-and-step-up.md`](docs/3fa-app-vault-and-step-up.md) for the isolated app-vault bootstrap, revocation, replay, privacy, and rollout requirements.
+
+Bluetooth/local-peer transfer uses the same encrypted device and clip contracts rather than an alternate trust model. See [`docs/proximity-bluetooth-transport.md`](docs/proximity-bluetooth-transport.md) for platform roles, consent, 3FA/Shared Auth isolation, and physical-device release gates.
 
 ## Security architecture
 

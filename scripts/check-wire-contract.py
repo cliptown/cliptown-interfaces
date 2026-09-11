@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import base64
+import hashlib
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -136,6 +139,119 @@ if leaked_step_up_fields:
         f"{leaked_step_up_fields}"
     )
 
+advertisement_schema = load_schema("proximity-advertisement.schema.json")
+assert_required_fields(
+    "proximity-advertisement.schema.json",
+    advertisement_schema,
+    {"protocol", "service_uuid", "rotation_epoch", "rotating_id"},
+)
+assert_snake_case("proximity-advertisement.schema.json", advertisement_schema)
+
+proximity_schema = load_schema("proximity-envelope.schema.json")
+assert_required_fields(
+    "proximity-envelope.schema.json",
+    proximity_schema,
+    {
+        "protocol",
+        "message_kind",
+        "message_id",
+        "session_id",
+        "sequence",
+        "issued_at_unix_ms",
+        "expires_at_unix_ms",
+        "sender_device_id",
+        "recipient_device_id",
+        "scope",
+        "ciphertext",
+        "ciphertext_sha256",
+        "signing_key_id",
+        "signature",
+    },
+)
+assert_snake_case("proximity-envelope.schema.json", proximity_schema)
+
+forbidden_proximity_fields = {
+    "password",
+    "pin",
+    "otp",
+    "otp_code",
+    "otp_seed",
+    "totp",
+    "totp_code",
+    "totp_seed",
+    "recovery_code",
+    "access_token",
+    "refresh_token",
+    "bearer_token",
+    "private_key",
+    "biometric",
+    "factor_proof",
+    "approval_result",
+    "assurance",
+    "aal",
+    "amr",
+}
+leaked_proximity_fields = sorted(
+    set(proximity_schema["properties"]) & forbidden_proximity_fields
+)
+if leaked_proximity_fields:
+    raise SystemExit(
+        "proximity transport became a factor or credential container: "
+        f"{leaked_proximity_fields}"
+    )
+
+proximity_fixture = json.loads((ROOT / "fixtures/proximity-v1.json").read_text())
+expected_advertisement_keys = {
+    "protocol",
+    "service_uuid",
+    "rotation_epoch",
+    "rotating_id",
+}
+if set(proximity_fixture["advertisement"]) != expected_advertisement_keys:
+    raise SystemExit("proximity advertisement fixture contains missing or unknown fields")
+if re.fullmatch(r"[A-Za-z0-9_-]{12}", proximity_fixture["advertisement"]["rotating_id"]) is None:
+    raise SystemExit("proximity advertisement fixture rotating id is invalid")
+
+expected_proximity_keys = set(proximity_schema["required"])
+scope_by_kind = {
+    "pairing_hello": "cliptown:device:pair",
+    "clipboard_offer": "cliptown:clipboard:import",
+    "clipboard_chunk": "cliptown:clipboard:import",
+    "shared_auth_step_up": "shared-auth:step-up:relay",
+}
+seen_messages: set[str] = set()
+last_sequence = 0
+for envelope in proximity_fixture["envelopes"]:
+    if set(envelope) != expected_proximity_keys:
+        raise SystemExit("proximity fixture contains missing or unknown fields")
+    if envelope["protocol"] != "cliptown.proximity.v1":
+        raise SystemExit("proximity fixture protocol drifted")
+    if scope_by_kind.get(envelope["message_kind"]) != envelope["scope"]:
+        raise SystemExit("proximity fixture purpose/scope mismatch")
+    if envelope["sender_device_id"] == envelope["recipient_device_id"]:
+        raise SystemExit("proximity fixture loops back to the sender")
+    if envelope["message_id"] in seen_messages or envelope["sequence"] <= last_sequence:
+        raise SystemExit("proximity fixture replays or reorders a message")
+    seen_messages.add(envelope["message_id"])
+    last_sequence = envelope["sequence"]
+    lifetime = envelope["expires_at_unix_ms"] - envelope["issued_at_unix_ms"]
+    if not 0 < lifetime <= 120_000:
+        raise SystemExit("proximity fixture lifetime exceeds two minutes")
+    try:
+        ciphertext = base64.urlsafe_b64decode(
+            envelope["ciphertext"] + "=" * (-len(envelope["ciphertext"]) % 4)
+        )
+    except (ValueError, TypeError) as error:
+        raise SystemExit("proximity fixture ciphertext is not base64url") from error
+    if not ciphertext or len(ciphertext) > 32 * 1024:
+        raise SystemExit("proximity fixture ciphertext exceeds the BLE frame limit")
+    if re.fullmatch(r"[a-f0-9]{64}", envelope["ciphertext_sha256"]) is None:
+        raise SystemExit("proximity fixture digest is invalid")
+    if hashlib.sha256(ciphertext).hexdigest() != envelope["ciphertext_sha256"]:
+        raise SystemExit("proximity fixture digest does not match its ciphertext")
+    if re.fullmatch(r"[A-Za-z0-9_-]{86}", envelope["signature"]) is None:
+        raise SystemExit("proximity fixture signature encoding is invalid")
+
 checks = {
     ROOT / "openapi/cliptown.openapi.yaml": [
         "clip_id:",
@@ -196,4 +312,6 @@ for path, needles in checks.items():
     if missing:
         raise SystemExit(f"{path.relative_to(ROOT)} is missing canonical fields: {missing}")
 
-print("ClipTown clipboard, app-vault, and step-up wire boundaries are isolated")
+print(
+    "ClipTown clipboard, app-vault, step-up, and proximity wire boundaries are isolated"
+)

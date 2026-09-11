@@ -18,7 +18,6 @@ exclude = [".env", ".env.*", ".direnv/**", ".zed/**", ".zed-pack/**", "tmp/**", 
 
 [targets.repository]
 dir = "."
-name = "cliptown-interfaces-repository"
 
 [targets.rust]
 dir = "generated/rust"

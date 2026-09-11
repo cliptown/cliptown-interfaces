@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cliptown.app/schemas/proximity-envelope.schema.json",
+  "title": "ClipTown Proximity Envelope",
+  "description": "A signed, recipient-bound and replay-safe control/chunk envelope carried over an untrusted BLE or local peer transport.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "message_kind",
+    "message_id",
+    "session_id",
+    "sequence",
+    "issued_at_unix_ms",
+    "expires_at_unix_ms",
+    "sender_device_id",
+    "recipient_device_id",
+    "scope",
+    "ciphertext",
+    "ciphertext_sha256",
+    "signing_key_id",
+    "signature"
+  ],
+  "properties": {
+    "protocol": {"const": "cliptown.proximity.v1"},
+    "message_kind": {
+      "enum": ["pairing_hello", "clipboard_offer", "clipboard_chunk", "shared_auth_step_up"]
+    },
+    "message_id": {"type": "string", "format": "uuid"},
+    "session_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{22,86}$"},
+    "sequence": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+    "issued_at_unix_ms": {"type": "integer", "minimum": 0},
+    "expires_at_unix_ms": {"type": "integer", "minimum": 1},
+    "sender_device_id": {"type": "string", "format": "uuid"},
+    "recipient_device_id": {"type": "string", "format": "uuid"},
+    "scope": {
+      "enum": [
+        "cliptown:device:pair",
+        "cliptown:clipboard:import",
+        "shared-auth:step-up:relay"
+      ]
+    },
+    "ciphertext": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "minLength": 1,
+      "maxLength": 43691,
+      "description": "Unpadded base64url encrypted application payload. Control/chunk frames decode to at most 32 KiB."
+    },
+    "ciphertext_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "signing_key_id": {"type": "string", "pattern": "^[A-Za-z0-9._:@/-]{1,128}$"},
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{86}$",
+      "description": "Unpadded base64url Ed25519 signature over the canonical envelope without this field."
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"message_kind": {"const": "pairing_hello"}}},
+      "then": {"properties": {"scope": {"const": "cliptown:device:pair"}}}
+    },
+    {
+      "if": {"properties": {"message_kind": {"enum": ["clipboard_offer", "clipboard_chunk"]}}},
+      "then": {"properties": {"scope": {"const": "cliptown:clipboard:import"}}}
+    },
+    {
+      "if": {"properties": {"message_kind": {"const": "shared_auth_step_up"}}},
+      "then": {"properties": {"scope": {"const": "shared-auth:step-up:relay"}}}
+    }
+  ]
+}
