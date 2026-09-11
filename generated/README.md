@@ -54,3 +54,40 @@ you are committing a regeneration, the pre-commit guard needs to be told so:
 ```sh
 REGEN=1 git commit -m "Regenerate clients from the updated route map"
 ```
+
+## What enforces the policy
+
+CI, not the filesystem, is authoritative:
+
+| Guard | Where | What it catches |
+| --- | --- | --- |
+| `check-generated-contract.py` | CI + pre-commit | a hand-edited or thawed file |
+| regenerate-and-diff | CI | committed output that no longer matches its source |
+| `post-checkout` / `post-merge` hooks | your clone | files that need to be re-frozen |
+
+Enable the hooks once per clone:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+Re-freeze at any time (safe and idempotent):
+
+```sh
+python3 scripts/check-generated-contract.py --freeze --require-readonly
+```
+
+The equivalent manual fallback is:
+
+```sh
+find generated -type f ! -name 'README.md' ! -name 'readme.md' -exec chmod a-w {} +
+```
+
+## Runtime contract (not just compile-time)
+
+JSON Schema is a **cross-check**, not always the primary generator input. Unit tests
+should validate fixtures and examples against Draft 2020-12 at runtime: valid
+fixtures must pass, invalid fixtures must fail, and schema keys should be compared
+with `.cli-flags.toml` environment names or route-map keys whenever those sources
+exist.
+
