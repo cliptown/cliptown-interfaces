@@ -32,7 +32,9 @@ assert(allowsNull(stored.properties.searchText));
 assert.equal(stored.properties.entityKind.pattern, "^[a-z][a-z0-9_]*$");
 assert.equal(stored.properties.contentHash.pattern, "^[0-9a-f]{64}$");
 assert.equal(stored.properties.searchText.maxLength, 200000);
-assert.deepEqual(defs.EmbeddingMetadata.additionalProperties, {});
+assert.deepEqual(defs.EmbeddingMetadata.properties, {});
+assert.deepEqual(defs.EmbeddingMetadata.unevaluatedProperties, {});
+assert.equal("additionalProperties" in defs.EmbeddingMetadata, false);
 assert.deepEqual(
   Object.keys(defs).sort(),
   [
@@ -80,5 +82,5 @@ if (config.codeFirst.rustModel) {
 }
 
 process.stdout.write(
-  "embedding contract verified: seven named peer authorities, 4100-slot storage, 4096-source cap, closed wire records, and provider provenance\n",
+  "embedding contract verified: seven named peer authorities, 4100-slot storage, 4096-source cap, closed wire records, open metadata map, and provider provenance\n",
 );
