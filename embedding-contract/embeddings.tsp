@@ -1,3 +1,6 @@
+import "@typespec/json-schema";
+using TypeSpec.JsonSchema;
+
 /**
  * ClipTown embedding contract v2.
  *
@@ -41,9 +44,13 @@ enum EmbeddingNormalization {
   None: "none",
 }
 
+/** Arbitrary metadata is intentionally open while the containing record is closed. */
+model EmbeddingMetadata is Record<unknown> {}
+
+@extension("additionalProperties", false)
 model EmbeddingInput {
   embeddingProvider: EmbeddingProvider;
-  generationProvider?: GenerationProvider;
+  generationProvider?: GenerationProvider | null;
   @minLength(1)
   @maxLength(200)
   `model`: string;
@@ -52,18 +59,20 @@ model EmbeddingInput {
   values: float32[];
 }
 
+@extension("additionalProperties", false)
 model StoredEmbedding {
   @format("uuid")
   tenantId: string;
   @minLength(1)
   @maxLength(80)
+  @pattern("^[a-z][a-z0-9_]*$")
   entityKind: string;
   @minLength(1)
   @maxLength(256)
   entityId: string;
   purpose: EmbeddingPurpose;
   embeddingProvider: EmbeddingProvider;
-  generationProvider?: GenerationProvider;
+  generationProvider?: GenerationProvider | null;
   @minLength(1)
   @maxLength(200)
   `model`: string;
@@ -78,9 +87,11 @@ model StoredEmbedding {
   @maxItems(4100)
   values: float32[];
   normalization: EmbeddingNormalization;
-  searchText?: string;
+  @maxLength(200000)
+  searchText?: string | null;
   @minLength(64)
   @maxLength(64)
+  @pattern("^[0-9a-f]{64}$")
   contentHash: string;
-  metadata?: Record<unknown>;
+  metadata?: EmbeddingMetadata;
 }
