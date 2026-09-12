@@ -125,3 +125,11 @@ Re-freeze at any time (safe, idempotent):
 python3 scripts/check-generated-contract.py --freeze --require-readonly
 ```
 
+# Generated files — read-only
+
+Do **not** hand-edit files in this directory. They are produced by tooling such as:
+
+- https://github.com/flags-2-env/flags-2-env (typical Dart path: `generated/dart/env.dart`)
+- https://github.com/oresoftware/api-docs
+- JSON Schema / OpenAPI / route-map generators in this repository
+

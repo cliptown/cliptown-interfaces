@@ -40,3 +40,14 @@ temp/
 
 # typespec-json-schema-validator comparison evidence (generated; never an authority)
 .typespec-json-schema-validator/
+tmp
+temp
+tmp/worktrees
+temp/worktrees
+# ores-api-docs generated route objects
+generated/routes/gleam/build/
+generated/routes/gleam/manifest.toml
+generated/routes/dart/.dart_tool/
+generated/routes/dart/pubspec.lock
+generated/routes/rust/target/
+generated/routes/rust/Cargo.lock
