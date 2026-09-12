@@ -1,0 +1,31 @@
+{
+  "manifest_id": "00000000-0000-4000-8000-000000000000",
+  "object_id": "00000000-0000-4000-8000-000000000000",
+  "clip_id": "00000000-0000-4000-8000-000000000000",
+  "content_cipher_version": "xchacha20poly1305-chunked-v1",
+  "plaintext_length": 0,
+  "ciphertext_length": 1,
+  "chunk_size": 65536,
+  "chunks": [
+    {
+      "chunk_index": 0,
+      "ciphertext_length": 1,
+      "ciphertext_sha256": "x",
+      "nonce": "x",
+      "randomized_storage_key": "xxxxxxxxxxxxxxxx"
+    }
+  ],
+  "wrapped_keys": [
+    {
+      "recipient_device_id": "00000000-0000-4000-8000-000000000000",
+      "key_id": "x",
+      "algorithm": "signal-envelope-v1",
+      "nonce": "x",
+      "wrapped_key": "x",
+      "associated_data_hash": "x"
+    }
+  ],
+  "encrypted_metadata": {},
+  "ciphertext_sha256": "x",
+  "created_at": "2026-01-01T00:00:00Z"
+}

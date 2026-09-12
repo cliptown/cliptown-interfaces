@@ -1,0 +1,19 @@
+{
+  "clip_id": 12345,
+  "kind": "text",
+  "payload": {
+    "algorithm": "xchacha20poly1305-v1",
+    "nonce": "xxxxxxxxxxxxxxxx",
+    "ciphertext": "x",
+    "key_id": "x"
+  },
+  "pinned": false,
+  "deleted": false,
+  "blind_terms": [
+    "xxxxxxxxxxxxxxxx"
+  ],
+  "source_device_id": "00000000-0000-4000-8000-000000000000",
+  "logical_clock": 0,
+  "created_at": "2026-01-01T00:00:00Z",
+  "updated_at": "2026-01-01T00:00:00Z"
+}
