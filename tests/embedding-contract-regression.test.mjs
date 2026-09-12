@@ -6,25 +6,32 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const config = JSON.parse(await read("embedding-contract/generation.json"));
 const schema = JSON.parse(await read(config.codeFirst.jsonSchema));
 const typeSpec = await read(config.codeFirst.typeSpec);
+const defs = schema.$defs;
+const stored = defs.StoredEmbedding;
+const input = defs.EmbeddingInput;
+
+const allowsNull = (property) =>
+  Array.isArray(property.anyOf) && property.anyOf.some((branch) => branch?.type === "null");
 
 test("stored and source dimensions cannot drift or become ambiguous", () => {
   assert.equal(config.dimensions.storage, 4100);
   assert.equal(config.dimensions.maximumSource, 4096);
   assert.equal(config.dimensions.padding, "trailing-zero");
-  assert.equal(schema.additionalProperties, false);
-  assert.equal(schema.properties.storageDimensions.const, 4100);
-  assert.equal(schema.properties.values.minItems, 4100);
-  assert.equal(schema.properties.values.maxItems, 4100);
-  assert.equal(schema.properties.originalDimensions.minimum, 1);
-  assert.equal(schema.properties.originalDimensions.maximum, 4096);
-  assert.equal(schema.$defs.EmbeddingInput.additionalProperties, false);
-  assert.equal(schema.$defs.EmbeddingInput.properties.values.minItems, 1);
-  assert.equal(schema.$defs.EmbeddingInput.properties.values.maxItems, 4096);
+  assert.equal(schema.$ref, "StoredEmbedding.json");
+  assert.equal(stored.additionalProperties, false);
+  assert.equal(stored.properties.storageDimensions.const, 4100);
+  assert.equal(stored.properties.values.minItems, 4100);
+  assert.equal(stored.properties.values.maxItems, 4100);
+  assert.equal(stored.properties.originalDimensions.minimum, 1);
+  assert.equal(stored.properties.originalDimensions.maximum, 4096);
+  assert.equal(input.additionalProperties, false);
+  assert.equal(input.properties.values.minItems, 1);
+  assert.equal(input.properties.values.maxItems, 4096);
 });
 
-test("embedding and generation provider roles remain distinct", () => {
-  const embeddingProviders = schema.properties.embeddingProvider.enum;
-  const generationProviders = schema.properties.generationProvider.enum;
+test("embedding and generation provider roles remain distinct and nullability is explicit", () => {
+  const embeddingProviders = defs.EmbeddingProvider.enum;
+  const generationProviders = defs.GenerationProvider.enum;
   assert.equal(new Set(embeddingProviders).size, embeddingProviders.length);
   assert.equal(new Set(generationProviders).size, generationProviders.length);
   assert(!embeddingProviders.includes("anthropic"));
@@ -34,15 +41,16 @@ test("embedding and generation provider roles remain distinct", () => {
     "an embedding-only provider must remain distinguishable",
   );
   assert(
-    generationProviders.some(
-      (provider) => provider !== null && !embeddingProviders.includes(provider),
-    ),
+    generationProviders.some((provider) => !embeddingProviders.includes(provider)),
     "a generation-only provider must remain distinguishable",
   );
+  assert(allowsNull(stored.properties.generationProvider));
+  assert(allowsNull(input.properties.generationProvider));
+  assert(allowsNull(stored.properties.searchText));
 });
 
 test("identity, provenance, and integrity fields stay mandatory and bounded", () => {
-  const required = new Set(schema.required);
+  const required = new Set(stored.required);
   for (const field of [
     "tenantId",
     "entityKind",
@@ -59,9 +67,29 @@ test("identity, provenance, and integrity fields stay mandatory and bounded", ()
   ]) {
     assert(required.has(field), `missing required field: ${field}`);
   }
-  assert.equal(schema.properties.embeddingSpace.minLength, 8);
-  assert.equal(schema.properties.contentHash.pattern, "^[0-9a-f]{64}$");
-  assert(schema.properties.tenantId.format === "uuid");
+  assert.equal(stored.properties.embeddingSpace.minLength, 8);
+  assert.equal(stored.properties.entityKind.pattern, "^[a-z][a-z0-9_]*$");
+  assert.equal(stored.properties.contentHash.minLength, 64);
+  assert.equal(stored.properties.contentHash.maxLength, 64);
+  assert.equal(stored.properties.contentHash.pattern, "^[0-9a-f]{64}$");
+  assert.equal(stored.properties.searchText.maxLength, 200000);
+  assert.equal(stored.properties.tenantId.format, "uuid");
+});
+
+test("all seven named embedding declarations have independently authored JSON Schema peers", () => {
+  assert.deepEqual(
+    Object.keys(defs).sort(),
+    [
+      "EmbeddingInput",
+      "EmbeddingMetadata",
+      "EmbeddingNormalization",
+      "EmbeddingProvider",
+      "EmbeddingPurpose",
+      "GenerationProvider",
+      "StoredEmbedding",
+    ].sort(),
+  );
+  assert.deepEqual(defs.EmbeddingMetadata.additionalProperties, {});
 });
 
 test("code-first paths are local and application startup cannot own migrations", () => {
@@ -78,4 +106,6 @@ test("code-first paths are local and application startup cannot own migrations",
   assert.match(typeSpec, /enum EmbeddingProvider/);
   assert.match(typeSpec, /enum GenerationProvider/);
   assert.match(typeSpec, /Anthropic: "anthropic"/);
+  assert.match(typeSpec, /@extension\("additionalProperties", false\)/);
+  assert.match(typeSpec, /generationProvider\?: GenerationProvider \| null/);
 });
