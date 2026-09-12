@@ -57,7 +57,9 @@
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "$id": "EmbeddingMetadata.json",
       "type": "object",
-      "additionalProperties": {}
+      "properties": {},
+      "unevaluatedProperties": {},
+      "description": "Arbitrary metadata is intentionally open while the containing record is closed."
     },
     "EmbeddingInput": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
