@@ -89,7 +89,9 @@ test("all seven named embedding declarations have independently authored JSON Sc
       "StoredEmbedding",
     ].sort(),
   );
-  assert.deepEqual(defs.EmbeddingMetadata.additionalProperties, {});
+  assert.deepEqual(defs.EmbeddingMetadata.properties, {});
+  assert.deepEqual(defs.EmbeddingMetadata.unevaluatedProperties, {});
+  assert.equal("additionalProperties" in defs.EmbeddingMetadata, false);
 });
 
 test("code-first paths are local and application startup cannot own migrations", () => {
