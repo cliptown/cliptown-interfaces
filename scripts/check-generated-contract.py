@@ -559,7 +559,11 @@ def check_generated_dir(
 def check_schema_runtime(root: Path, findings: Findings) -> None:
     schemas = [path for path in discover_schemas(root) if looks_like_schema(load_json(path))]
     if not schemas:
-        findings.note("no JSON Schema documents found to runtime-check")
+        fixtures = root / "tests" / "generated-contract"
+        if any(json_files(fixtures / verdict) for verdict in ("valid", "invalid")):
+            findings.error("no JSON Schema documents found for contract fixtures")
+        else:
+            findings.note("no JSON Schema documents found to runtime-check")
         return
     validated = 0
     for schema_path in schemas:
@@ -833,7 +837,7 @@ class SelfTests(unittest.TestCase):
             root = Path(tmp)
             (root / "json-schema").mkdir()
             (root / "json-schema" / "alpha.schema.json").write_text(
-                '{"type":"object","properties":{"alpha":{"type":"integer"}}}',
+                '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"alpha":{"type":"integer"}}}',
                 encoding="utf-8",
             )
             directory = root / "tests" / "generated-contract" / "invalid"
