@@ -1,0 +1,13 @@
+{
+  "protocol_version": 1,
+  "mutation_id": "",
+  "app_id": "x",
+  "namespace": "x",
+  "opaque_record_id": "xxxxxxxxxxxxxxxx",
+  "deleted": true,
+  "source_device_id": "x",
+  "logical_clock": 0,
+  "created_at": "2026-01-01T00:00:00Z",
+  "updated_at": "2026-01-01T00:00:00Z",
+  "device_signature": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+}
