@@ -841,7 +841,7 @@ class SelfTests(unittest.TestCase):
             (directory / "beta.bad.json").write_text('{"beta":"bad"}')
             findings = Findings()
             check_schema_runtime(root, findings)
-            self.assertTrue(any("no unambiguous beta.schema.json" in e for e in findings.errors))
+            self.assertTrue(any("no unambiguous beta.schema.json" in e for e in findings.errors), findings.errors + findings.notes)
 
     def test_writable_policy_skips_chmod(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
