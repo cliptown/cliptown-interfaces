@@ -30,6 +30,9 @@ jobs:
       # Policy READMEs must match what git actually does, every generated file
       # must be freezable, and JSON Schema must still accept the valid fixtures
       # and reject the invalid ones.
+      - name: Verify schema-to-fixture routing and fail-closed behavior
+        run: python3 scripts/check-generated-contract.py --self-test
+
       - name: Check generated policy and runtime contract
         run: python3 scripts/check-generated-contract.py --freeze --require-readonly
 
