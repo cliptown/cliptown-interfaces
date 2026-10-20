@@ -213,7 +213,7 @@ def discover_schemas(root: Path) -> list[Path]:
             for path in directory.rglob("*.json"):
                 if not path.is_file():
                     continue
-                if any(part in SKIP_DIR_NAMES for part in path.parts):
+                if any(part in SKIP_DIR_NAMES for part in path.relative_to(root).parts):
                     continue
                 name = path.name.lower()
                 if name.endswith(".schema.json") or "schema" in name:
@@ -559,7 +559,11 @@ def check_generated_dir(
 def check_schema_runtime(root: Path, findings: Findings) -> None:
     schemas = [path for path in discover_schemas(root) if looks_like_schema(load_json(path))]
     if not schemas:
-        findings.note("no JSON Schema documents found to runtime-check")
+        fixtures = root / "tests" / "generated-contract"
+        if any(json_files(fixtures / verdict) for verdict in ("valid", "invalid")):
+            findings.error("no JSON Schema documents found for contract fixtures")
+        else:
+            findings.note("no JSON Schema documents found to runtime-check")
         return
     validated = 0
     for schema_path in schemas:
@@ -585,44 +589,53 @@ def check_schema_runtime(root: Path, findings: Findings) -> None:
                     findings.error(
                         f"{fixture.relative_to(root)}: failed {rel}: {errors[0]}"
                     )
+    # Each fixture is deliberately scoped to a single named JSON Schema.
+    # Never run every fixture against the first schema discovered: an invalid
+    # instance for one contract may be valid under an unrelated contract.
     contract_root = root / "tests" / "generated-contract"
-    schema_for_fixtures = None
-    for candidate in (
-        root / "generated" / "json-schema",
-        root / "json-schema",
-        root / "schema",
-        root / "schemas",
-    ):
-        if candidate.is_dir():
-            for path in sorted(candidate.rglob("*.json")):
-                doc = load_json(path)
-                if looks_like_schema(doc):
-                    schema_for_fixtures = (path, doc)
-                    break
-        if schema_for_fixtures:
-            break
-    if schema_for_fixtures and contract_root.is_dir():
-        schema_path, schema_doc = schema_for_fixtures
-        for fixture in json_files(contract_root / "valid"):
-            instance = load_json(fixture)
-            validated += 1
-            if instance is None:
-                findings.error(f"{fixture.relative_to(root)}: invalid JSON")
-                continue
-            errors = jsonschema_validate(instance, schema_doc)
-            if errors:
+    schema_by_name: dict[str, tuple[Path, dict[str, Any]]] = {}
+    for schema_path in schemas:
+        doc = load_json(schema_path)
+        if not isinstance(doc, dict) or not schema_path.name.endswith(".schema.json"):
+            continue
+        name = schema_path.name.removesuffix(".schema.json")
+        # Ambiguous schema authorities must fail closed instead of silently
+        # depending on directory enumeration order.
+        if name in schema_by_name:
+            findings.error(
+                f"duplicate JSON Schema authority for {name}: "
+                f"{schema_by_name[name][0].relative_to(root)} and "
+                f"{schema_path.relative_to(root)}"
+            )
+        else:
+            schema_by_name[name] = (schema_path, doc)
+    for verdict in ("valid", "invalid"):
+        for fixture in json_files(contract_root / verdict):
+            contract_name = fixture.name.split(".", 1)[0]
+            authority = schema_by_name.get(contract_name)
+            if authority is None:
                 findings.error(
-                    f"{fixture.relative_to(root)} must satisfy {schema_path.relative_to(root)}: {errors[0]}"
+                    f"{fixture.relative_to(root)}: no unambiguous "
+                    f"{contract_name}.schema.json authority"
                 )
-        for fixture in json_files(contract_root / "invalid"):
+                continue
+            schema_path, schema_doc = authority
             instance = load_json(fixture)
             validated += 1
             if instance is None:
+                if verdict == "valid":
+                    findings.error(f"{fixture.relative_to(root)}: invalid JSON")
                 continue
             errors = jsonschema_validate(instance, schema_doc)
-            if not errors:
+            if verdict == "valid" and errors:
                 findings.error(
-                    f"{fixture.relative_to(root)} must be rejected by {schema_path.relative_to(root)}"
+                    f"{fixture.relative_to(root)} must satisfy "
+                    f"{schema_path.relative_to(root)}: {errors[0]}"
+                )
+            if verdict == "invalid" and not errors:
+                findings.error(
+                    f"{fixture.relative_to(root)} must be rejected by "
+                    f"{schema_path.relative_to(root)}"
                 )
     findings.note(f"runtime JSON Schema checks exercised {validated} instance(s)")
 
@@ -782,8 +795,8 @@ class SelfTests(unittest.TestCase):
             invalid_dir = root / "tests" / "generated-contract" / "invalid"
             valid_dir.mkdir(parents=True)
             invalid_dir.mkdir(parents=True)
-            (valid_dir / "ok.json").write_text(json.dumps({"PORT": 9}), encoding="utf-8")
-            (invalid_dir / "bad.json").write_text(json.dumps({"PORT": "no"}), encoding="utf-8")
+            (valid_dir / "env.json").write_text(json.dumps({"PORT": 9}), encoding="utf-8")
+            (invalid_dir / "env.wrong-type.json").write_text(json.dumps({"PORT": "no"}), encoding="utf-8")
             (root / ".cli-flags.toml").write_text(
                 '[flags.port]\nenv = "PORT"\ntype = "integer"\ndefault = 9\n',
                 encoding="utf-8",
@@ -792,6 +805,47 @@ class SelfTests(unittest.TestCase):
             self.assertEqual(findings.errors, [], findings.errors)
             self.assertFalse(is_writable(env_path))
             self.assertTrue(is_writable(root / "generated" / "README.md"))
+
+    def test_multiple_fixture_families_are_validated_by_matching_schemas(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            schema_dir = root / "json-schema"
+            schema_dir.mkdir()
+            for name in ("alpha", "beta"):
+                (schema_dir / f"{name}.schema.json").write_text(
+                    json.dumps({
+                        "$schema": "https://json-schema.org/draft/2020-12/schema",
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": [name],
+                        "properties": {name: {"type": "integer"}},
+                    }), encoding="utf-8"
+                )
+            fixtures = root / "tests" / "generated-contract"
+            for verdict in ("valid", "invalid"):
+                (fixtures / verdict).mkdir(parents=True)
+            (fixtures / "valid" / "alpha.json").write_text('{"alpha": 2}')
+            (fixtures / "valid" / "beta.json").write_text('{"beta": 4}')
+            (fixtures / "invalid" / "alpha.wrong-type.json").write_text('{"alpha": "bad"}')
+            (fixtures / "invalid" / "beta.missing.json").write_text('{"alpha": 1}')
+            findings = Findings()
+            check_schema_runtime(root, findings)
+            self.assertEqual(findings.errors, [], findings.errors)
+
+    def test_unknown_fixture_family_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "json-schema").mkdir()
+            (root / "json-schema" / "alpha.schema.json").write_text(
+                '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"alpha":{"type":"integer"}}}',
+                encoding="utf-8",
+            )
+            directory = root / "tests" / "generated-contract" / "invalid"
+            directory.mkdir(parents=True)
+            (directory / "beta.bad.json").write_text('{"beta":"bad"}')
+            findings = Findings()
+            check_schema_runtime(root, findings)
+            self.assertTrue(any("no unambiguous beta.schema.json" in e for e in findings.errors), findings.errors + findings.notes)
 
     def test_writable_policy_skips_chmod(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -830,7 +884,7 @@ class SelfTests(unittest.TestCase):
             )
             invalid_dir = root / "tests" / "generated-contract" / "invalid"
             invalid_dir.mkdir(parents=True)
-            (invalid_dir / "extra.json").write_text(
+            (invalid_dir / "env.extra.json").write_text(
                 json.dumps({"PORT": 1, "NOPE": True}), encoding="utf-8"
             )
             # This extra key should be rejected; if schema is too loose the checker errors.
