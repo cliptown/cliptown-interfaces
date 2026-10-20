@@ -213,7 +213,7 @@ def discover_schemas(root: Path) -> list[Path]:
             for path in directory.rglob("*.json"):
                 if not path.is_file():
                     continue
-                if any(part in SKIP_DIR_NAMES for part in path.parts):
+                if any(part in SKIP_DIR_NAMES for part in path.relative_to(root).parts):
                     continue
                 name = path.name.lower()
                 if name.endswith(".schema.json") or "schema" in name:
