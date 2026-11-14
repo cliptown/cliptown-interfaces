@@ -63,6 +63,8 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
+      - name: Protect encrypted ClipTown envelope boundaries
+        run: node --test tests/clip-envelope-privacy.test.mjs
       - name: Compile JSON Schemas with pinned validators
         run: |
           for schema in json-schema/*.schema.json; do
