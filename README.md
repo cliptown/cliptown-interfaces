@@ -11,6 +11,7 @@ Versioned contracts shared by the ClipTown API, Flutter app, browser extension, 
 - `openapi/cliptown.openapi.yaml` is the primary ClipTown HTTP contract exposed by the Rust backend.
 - `openapi/memebank-integration.openapi.yaml` is the API-first MemeBank transfer contract. It is independent of mobile app installation, deep links, local IPC, and clipboard monitoring.
 - `json-schema/*.schema.json` are runtime validation contracts for browser, Flutter, API, and SDK boundaries.
+- `json-schema/proximity-*.schema.json` define rotating BLE discovery metadata and signed, recipient-bound, replay-safe encrypted proximity envelopes. Bluetooth is a transport and never an authentication factor.
 - `json-schema/memebank-api-transfer-v1.schema.json` validates ciphertext-only MemeBank API transfer requests.
 - `json-schema/memebank-clipboard-v1.schema.json` is only an additive local clipboard compatibility subset when MemeBank explicitly copies an image. The canonical clipboard schema remains owned by `memebank/mb-interfaces`, and it is not the product-integration transport.
 - `generated/` contains reviewable Rust, TypeScript, and Dart model snapshots. CI validates all three languages.
@@ -40,6 +41,8 @@ MemeBank routes do not accept `X-3FA-Step-Up`, a 3FA bearer, a 3FA app-presence 
 
 See [`docs/3fa-app-vault-and-step-up.md`](docs/3fa-app-vault-and-step-up.md) for the isolated app-vault bootstrap, revocation, replay, privacy, and rollout requirements.
 
+Bluetooth/local-peer transfer uses the same encrypted device and clip contracts rather than an alternate trust model. See [`docs/proximity-bluetooth-transport.md`](docs/proximity-bluetooth-transport.md) for platform roles, consent, 3FA/Shared Auth isolation, and physical-device release gates.
+
 ## Security architecture
 
 See [`docs/signal-device-sync-and-recovery.md`](docs/signal-device-sync-and-recovery.md). Signal Protocol sessions authorize devices and deliver small wrapped account/clip/object/app-vault keys. Text, metadata, images, files, product-vault records, and MemeBank transfer payloads are encrypted before PostgreSQL, Supabase, Rust services, or Cloudflare R2 receive them.
@@ -62,3 +65,18 @@ CI verifies the exact Buf, Rust, and Dart versions before contract or generated-
 ```
 
 The generated Rust snapshot intentionally contains a small hand-reviewable model layer so sibling repositories can compile without requiring code generation during every build.
+
+## HTTP route keys (oresoftware/api-docs)
+
+Operation keys live in `route-maps/api.route-map.json`. That JSON is the shared
+source; JSON Schema (`scripts/vendor/route-map.schema.json`) is the contract.
+`python3 scripts/generate-routes.py --map route-maps/api.route-map.json --out generated/routes`
+emits compile-time objects in Rust (`RouteKey`), TypeScript (`Routes`), Dart
+(`Routes.byKey`), and Gleam (`RouteKey`). Frontend code uses keys instead of
+path strings; a missing backend `match` / `case` / `RouteHandlers` arm fails
+to compile.
+
+Maps travel between devices as opto-sync envelopes (`ores.api-docs.route-map`).
+The route map uses opto-sync; opto-sync does not depend on this RPC layer.
+See https://github.com/oresoftware/api-docs
+

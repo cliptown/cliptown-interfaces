@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cliptown.app/schemas/proximity-advertisement.schema.json",
+  "title": "ClipTown Proximity Advertisement",
+  "description": "A rotating, account-unlinkable BLE discovery record. It is discovery metadata only and grants no trust or authorization.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "service_uuid", "rotation_epoch", "rotating_id"],
+  "properties": {
+    "protocol": {"const": "cliptown.proximity.v1"},
+    "service_uuid": {"const": "c11f7a00-7b9e-4d8a-9c3a-4b8a0d86e001"},
+    "rotation_epoch": {"type": "integer", "minimum": 0},
+    "rotating_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{12}$",
+      "description": "Nine HMAC-derived bytes encoded as unpadded base64url; rotates at least every two minutes."
+    }
+  }
+}
