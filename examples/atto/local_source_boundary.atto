@@ -1,0 +1,8 @@
+// AttoLang example: pure, local source-size guards before encryption.
+// The caller must check both predicates; no network transport is defined here.
+fnc nonnegative_source_size(int byte_length) -> bool {
+    return byte_length >= 0;
+}
+fnc within_source_size_limit(int byte_length) -> bool {
+    return byte_length <= 1048576;
+}

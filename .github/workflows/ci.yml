@@ -65,6 +65,8 @@ jobs:
           node-version: 22
       - name: Protect encrypted ClipTown envelope boundaries
         run: node --test tests/clip-envelope-privacy.test.mjs
+      - name: Exercise AttoLang local-source boundaries and negative canaries
+        run: node --test tests/atto-local-source-contract.test.mjs
       - name: Compile JSON Schemas with pinned validators
         run: |
           for schema in json-schema/*.schema.json; do
