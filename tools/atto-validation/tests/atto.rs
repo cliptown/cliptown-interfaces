@@ -84,9 +84,18 @@ fn atto_metadata_schema_is_closed_and_admits_only_bounded_local_utf8_source() {
         .collect();
     assert_eq!(declared, required);
     for length in [0, 1, 1048575, 1048576] {
-        assert!(accepts(&schema, &candidate(json!(length))), "length {length}");
+        assert!(
+            accepts(&schema, &candidate(json!(length))),
+            "length {length}"
+        );
     }
-    for length in [json!(-1), json!(1048577), json!(1.5), json!("4"), Value::Null] {
+    for length in [
+        json!(-1),
+        json!(1048577),
+        json!(1.5),
+        json!("4"),
+        Value::Null,
+    ] {
         assert!(!accepts(&schema, &candidate(length)));
     }
 }
@@ -126,7 +135,16 @@ fn atto_examples_remain_preflight_only_not_network_transport() {
         assert!(source.contains(fragment), "missing Atto guard: {fragment}");
     }
     assert_eq!(source.matches("fnc ").count(), 2);
-    for forbidden in ["fetch(", "http(", "socket(", "private_key(", "bearer_token("] {
-        assert!(!source.contains(forbidden), "unexpected transport: {forbidden}");
+    for forbidden in [
+        "fetch(",
+        "http(",
+        "socket(",
+        "private_key(",
+        "bearer_token(",
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "unexpected transport: {forbidden}"
+        );
     }
 }
