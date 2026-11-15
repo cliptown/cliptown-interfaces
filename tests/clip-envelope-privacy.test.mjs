@@ -33,3 +33,15 @@ test('blind index and opt-in vector metadata have strict wire bounds', () => {
   assert.deepEqual(vector.type, ['array', 'null']);
   assert(!schema.required.includes('opt_in_embedding'));
 });
+
+test('ciphertext algorithms and nonce metadata remain explicitly bounded', () => {
+  const payload = schema.properties.payload.properties;
+  assert.deepEqual(payload.algorithm.enum, ['xchacha20poly1305-v1', 'aes-256-gcm-v1']);
+  assert.equal(payload.nonce.type, 'string');
+  assert.equal(payload.nonce.minLength, 16);
+  assert.equal(payload.nonce.maxLength, 64);
+  assert.equal(payload.key_id.maxLength, 128);
+  assert.equal(payload.ciphertext.type, 'string');
+  assert(payload.ciphertext.minLength >= 1);
+  assert.equal(schema.properties.logical_clock.minimum, 0);
+});
