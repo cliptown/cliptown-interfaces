@@ -80,3 +80,7 @@ Maps travel between devices as opto-sync envelopes (`ores.api-docs.route-map`).
 The route map uses opto-sync; opto-sync does not depend on this RPC layer.
 See https://github.com/oresoftware/api-docs
 
+
+## AttoLang local-source support
+
+The additive [AttoLang local-source contract](docs/atto-lang-local-source.md) classifies `.atto` files before encryption and fails closed on invalid size, extension, scope and extra fields. It is **not** a server-side plaintext metadata contract or a claim of executable cross-backend AttoLang SDK parity.
