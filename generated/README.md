@@ -1,71 +1,40 @@
 <!-- generated-policy: frozen -->
 
-# `generated/` — committed, and not hand-editable
+# `generated/` — committed output, not hand-editable
 
-Everything in this directory is machine-written and **committed to version
-control**. Do not edit these files by hand. Change the source they come from
-and re-run the generator.
+Generated **artifacts** in this directory are machine-written and committed to
+version control. This policy README is maintained by people, not generated.
+Do not edit generated artifacts by hand: change their primary source and rerun
+the generator.
 
-Typical producers:
+Typical producers include:
 
-- [`flags-2-env`](https://github.com/flags-2-env) — e.g. `generated/dart/env.dart`
-- [`oresoftware/api-docs`](https://github.com/oresoftware/api-docs) — route maps and clients
-- JSON Schema / OpenAPI generators in this repository
+- [`flags-2-env`](https://github.com/flags-2-env/flags-2-env), for example
+  `generated/dart/env.dart`;
+- [`oresoftware/api-docs`](https://github.com/oresoftware/api-docs) for route
+  maps and clients; and
+- JSON Schema, OpenAPI, and route-map generators in this repository.
 
-## Why the files are read-only on disk
+## Local read-only files
 
-After generation they are frozen with `chmod a-w`. Your editor will refuse the
-write, which is the point — it turns "I edited the wrong file" into an error you
-see immediately rather than a diff you notice in review.
+After generation, `chmod a-w` freezes generated artifacts. An editor can then
+detect accidental writes immediately. Directories and this README remain
+writable so generators can replace files and the policy can be updated.
 
-**Git does not store this.** Git tracks only the executable bit, so every file
-here is mode `100644` in the object database and a fresh clone comes back
-writable. The read-only bit is a local ergonomic guard; it is *not* what
-enforces the policy.
-
-## What actually enforces the policy
-
-CI, not the filesystem:
-
-| Guard | Where | What it catches |
-| --- | --- | --- |
-| `check-generated-contract.py` | CI + pre-commit | a hand-edited or thawed file |
-| regenerate-and-diff | CI | committed output that no longer matches its source |
-| `post-checkout` / `post-merge` hooks | your clone | re-freezes after every checkout |
-
-Enable the hooks once per clone:
-
-```sh
-git config core.hooksPath .githooks
-```
-
-Re-freeze at any time (safe, idempotent):
-
-```sh
-python3 scripts/check-generated-contract.py --freeze --require-readonly
-```
-
-## Regenerating
-
-Edit the **primary source** — `.cli-flags.toml`, the route map, `*.schema.json`
-— then run the generator. Generators thaw, write, and re-freeze on their own. If
-you are committing a regeneration, the pre-commit guard needs to be told so:
-
-```sh
-REGEN=1 git commit -m "Regenerate clients from the updated route map"
-```
+**Git does not preserve ordinary file write bits.** It tracks the executable
+bit, not the local read-only setting. A fresh checkout is writable until a
+hook or a manual freeze reapplies the policy. This is a local convenience,
+**not** proof that generated files match their sources.
 
 ## What enforces the policy
 
-CI, not the filesystem, is authoritative:
+| Guard | What it actually verifies |
+| --- | --- |
+| `scripts/check-generated-contract.py --freeze --require-readonly` | Policy README, frozen file modes, and runtime JSON Schema/fixture contract checks |
+| `generated-contract` CI regeneration step | Diff against fresh generated output **only if** `.generated-regen.sh` is provided; otherwise the workflow explicitly skips that step |
+| `.githooks` | Local pre-commit and checkout/merge assistance **only when enabled** |
 
-| Guard | Where | What it catches |
-| --- | --- | --- |
-| `check-generated-contract.py` | CI + pre-commit | a hand-edited or thawed file |
-| regenerate-and-diff | CI | committed output that no longer matches its source |
-| `post-checkout` / `post-merge` hooks | your clone | files that need to be re-frozen |
-
-Enable the hooks once per clone:
+Enable local hooks once per clone:
 
 ```sh
 git config core.hooksPath .githooks
@@ -77,17 +46,30 @@ Re-freeze at any time (safe and idempotent):
 python3 scripts/check-generated-contract.py --freeze --require-readonly
 ```
 
-The equivalent manual fallback is:
+Equivalent manual fallback:
 
 ```sh
 find generated -type f ! -name 'README.md' ! -name 'readme.md' -exec chmod a-w {} +
 ```
 
+## Regenerating
+
+Edit the **primary source** — for example `.cli-flags.toml`, a route map,
+OpenAPI, or `*.schema.json` — and rerun the relevant generator. Preferred
+generators thaw their own outputs, regenerate, and re-freeze. When the local
+pre-commit guard requires explicit regeneration intent, use:
+
+```sh
+REGEN=1 git commit -m "Regenerate clients from the updated route map"
+```
+
+Do not treat passing CI as regenerated-output equivalence if this repository
+has not supplied `.generated-regen.sh`.
+
 ## Runtime contract (not just compile-time)
 
-JSON Schema is a **cross-check**, not always the primary generator input. Unit tests
-should validate fixtures and examples against Draft 2020-12 at runtime: valid
-fixtures must pass, invalid fixtures must fail, and schema keys should be compared
-with `.cli-flags.toml` environment names or route-map keys whenever those sources
-exist.
-
+JSON Schema is a **cross-check**, not necessarily the primary generator input.
+Unit tests should validate fixtures and examples against Draft 2020-12 at
+runtime: valid fixtures must pass, invalid fixtures must fail, and schema keys
+should be compared with `.cli-flags.toml` environment names or route-map keys
+whenever those sources exist.
