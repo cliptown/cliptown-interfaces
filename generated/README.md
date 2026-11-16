@@ -31,8 +31,8 @@ CI, not the filesystem, is authoritative:
 
 | Guard | Where | What it catches |
 | --- | --- | --- |
-| `check-generated-contract.py` | CI + pre-commit | a hand-edited or thawed file |
-| regenerate-and-diff | CI | committed output that no longer matches its source |
+| `check-generated-contract.py` | CI + pre-commit | frozen-policy marker, file mode and runtime schema/fixture checks (not regeneration equality) |
+| regenerate-and-diff | CI when `.generated-regen.sh` exists | regenerated output that differs from committed artifacts; explicitly skipped without the script |
 | `post-checkout` / `post-merge` hooks | your clone | files that need to be re-frozen |
 
 Enable the hooks once per clone:
@@ -52,6 +52,11 @@ The equivalent manual fallback is:
 ```sh
 find generated -type f ! -name 'README.md' ! -name 'readme.md' -exec chmod a-w {} +
 ```
+
+The regeneration/diff step does **not** run unless the repository provides
+`.generated-regen.sh`. A passing read-only-policy check by itself does not
+prove that committed generated output matches its primary source. Treat that
+equivalence as **unverified** until the generator is run and compared.
 
 ## Regenerating
 
