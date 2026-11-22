@@ -409,7 +409,6 @@ mod shared_replay_fixtures {
     }
 }
 
-
 /// Exact immutable Ed25519 signing input shared by independent ClipTown
 /// clients. This function does not authorize or sign a request.
 pub struct DeviceProofSigningFields<'a> {
