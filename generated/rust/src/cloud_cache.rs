@@ -10,6 +10,8 @@ pub enum CloudCachePolicyError {
     InvalidCloudCache,
     InvalidCiphertext,
     SizeLimitExceeded,
+    InvalidDeviceSequence,
+    DeviceSequenceReplay,
 }
 
 impl CloudCachePolicyError {
@@ -18,6 +20,8 @@ impl CloudCachePolicyError {
             Self::InvalidCloudCache => "invalid_cloud_cache",
             Self::InvalidCiphertext => "invalid_ciphertext",
             Self::SizeLimitExceeded => "size_limit_exceeded",
+            Self::InvalidDeviceSequence => "invalid_device_sequence",
+            Self::DeviceSequenceReplay => "device_sequence_replay",
         }
     }
 }
@@ -32,6 +36,26 @@ impl std::error::Error for CloudCachePolicyError {}
 pub const MAX_CLOUD_TEXT_ITEMS: usize = 2_000;
 pub const MAX_CLOUD_LOGICAL_BYTES: usize = 5 * 1024 * 1024;
 pub const PER_CLOUD_ITEM_RESERVE_BYTES: usize = 512;
+
+pub const MAX_CLOUD_DEVICE_SEQUENCE: i64 = 9_007_199_254_740_990;
+
+/// Pure preflight; persisted D1 trigger is authoritative across parallel writes.
+pub fn checked_device_sequence(
+    incoming: i64,
+    previous: Option<i64>,
+) -> Result<i64, CloudCachePolicyError> {
+    if !(1..=MAX_CLOUD_DEVICE_SEQUENCE).contains(&incoming)
+        || previous.is_some_and(|value| {
+            !(1..=MAX_CLOUD_DEVICE_SEQUENCE).contains(&value)
+        })
+    {
+        return Err(CloudCachePolicyError::InvalidDeviceSequence);
+    }
+    if previous.is_some_and(|value| incoming <= value) {
+        return Err(CloudCachePolicyError::DeviceSequenceReplay);
+    }
+    Ok(incoming)
+}
 
 /// Immutable view: while a Rust caller retains this borrowed ciphertext slice
 /// it cannot mutably borrow the original buffer. No copies are required.
@@ -335,6 +359,52 @@ mod cross_compiler_fixtures {
                 (result, expected) => panic!(
                     "cross-compiler case {} expected {:?}, got {:?}",
                     case.name, expected, result
+                ),
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod shared_replay_fixtures {
+    use super::*;
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    struct ReplayCase {
+        name: String,
+        incoming: i64,
+        previous: Option<i64>,
+        accepted: Option<i64>,
+        error: Option<String>,
+    }
+
+    #[derive(Deserialize)]
+    struct ReplayFixtures {
+        protocol_version: i64,
+        max_device_sequence: i64,
+        cases: Vec<ReplayCase>,
+    }
+
+    #[test]
+    fn signed_device_sequence_contract_matches_other_compilers() {
+        let fixture: ReplayFixtures = serde_json::from_str(include_str!(
+            "../../../fixtures/cloudflare-device-replay-v1.json"
+        ))
+        .expect("device replay fixture JSON");
+        assert_eq!(fixture.protocol_version, 1);
+        assert_eq!(fixture.max_device_sequence, MAX_CLOUD_DEVICE_SEQUENCE);
+        for case in fixture.cases {
+            match checked_device_sequence(case.incoming, case.previous) {
+                Ok(accepted) => {
+                    assert_eq!(case.error, None, "case: {}", case.name);
+                    assert_eq!(Some(accepted), case.accepted, "case: {}", case.name);
+                }
+                Err(error) => assert_eq!(
+                    Some(error.code()),
+                    case.error.as_deref(),
+                    "case: {}",
+                    case.name
                 ),
             }
         }
