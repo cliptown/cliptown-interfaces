@@ -29,7 +29,6 @@ impl std::fmt::Display for CloudCachePolicyError {
 }
 impl std::error::Error for CloudCachePolicyError {}
 
-
 pub const MAX_CLOUD_TEXT_ITEMS: usize = 2_000;
 pub const MAX_CLOUD_LOGICAL_BYTES: usize = 5 * 1024 * 1024;
 pub const PER_CLOUD_ITEM_RESERVE_BYTES: usize = 512;
@@ -152,12 +151,16 @@ mod tests {
     fn newest_two_thousand_only() {
         let payload = [3_u8];
         let ids = (0..2_001).map(|i| format!("clip_{i}")).collect::<Vec<_>>();
-        let rows = ids.iter().enumerate().map(|(index, id)| BorrowedTextEnvelope {
-            envelope_id: id,
-            server_sequence: (index + 1) as u64,
-            kind: "text",
-            ciphertext: &payload,
-        }).collect::<Vec<_>>();
+        let rows = ids
+            .iter()
+            .enumerate()
+            .map(|(index, id)| BorrowedTextEnvelope {
+                envelope_id: id,
+                server_sequence: (index + 1) as u64,
+                kind: "text",
+                ciphertext: &payload,
+            })
+            .collect::<Vec<_>>();
         let result = plan_text_cache(&rows);
         assert!(matches!(
             result,
@@ -172,9 +175,24 @@ mod tests {
         let small = [1_u8];
         let medium = [1_u8; 1_024];
         let rows = [
-            BorrowedTextEnvelope { envelope_id: "old", server_sequence: 1, kind: "text", ciphertext: &small },
-            BorrowedTextEnvelope { envelope_id: "new", server_sequence: 3, kind: "text", ciphertext: &large },
-            BorrowedTextEnvelope { envelope_id: "middle", server_sequence: 2, kind: "text", ciphertext: &medium },
+            BorrowedTextEnvelope {
+                envelope_id: "old",
+                server_sequence: 1,
+                kind: "text",
+                ciphertext: &small,
+            },
+            BorrowedTextEnvelope {
+                envelope_id: "new",
+                server_sequence: 3,
+                kind: "text",
+                ciphertext: &large,
+            },
+            BorrowedTextEnvelope {
+                envelope_id: "middle",
+                server_sequence: 2,
+                kind: "text",
+                ciphertext: &medium,
+            },
         ];
         assert!(matches!(
             plan_text_cache(&rows),
@@ -186,19 +204,52 @@ mod tests {
     fn reject_nontext_duplicate_invalid_and_zero_length() {
         let payload = [1_u8];
         let valid = BorrowedTextEnvelope {
-            envelope_id: "clip_1", server_sequence: 1, kind: "text", ciphertext: &payload,
+            envelope_id: "clip_1",
+            server_sequence: 1,
+            kind: "text",
+            ciphertext: &payload,
         };
-        assert_eq!(plan_text_cache(&[valid, valid]), Err(CloudCachePolicyError::InvalidCloudCache));
-        assert_eq!(plan_text_cache(&[BorrowedTextEnvelope {kind: "file", ..valid}]), Err(CloudCachePolicyError::InvalidCloudCache));
-        assert_eq!(plan_text_cache(&[BorrowedTextEnvelope {envelope_id: "a/b", ..valid}]), Err(CloudCachePolicyError::InvalidCloudCache));
-        assert_eq!(plan_text_cache(&[BorrowedTextEnvelope {server_sequence: 0, ..valid}]), Err(CloudCachePolicyError::InvalidCloudCache));
-        assert_eq!(plan_text_cache(&[BorrowedTextEnvelope {ciphertext: &[], ..valid}]), Err(CloudCachePolicyError::InvalidCiphertext));
+        assert_eq!(
+            plan_text_cache(&[valid, valid]),
+            Err(CloudCachePolicyError::InvalidCloudCache)
+        );
+        assert_eq!(
+            plan_text_cache(&[BorrowedTextEnvelope {
+                kind: "file",
+                ..valid
+            }]),
+            Err(CloudCachePolicyError::InvalidCloudCache)
+        );
+        assert_eq!(
+            plan_text_cache(&[BorrowedTextEnvelope {
+                envelope_id: "a/b",
+                ..valid
+            }]),
+            Err(CloudCachePolicyError::InvalidCloudCache)
+        );
+        assert_eq!(
+            plan_text_cache(&[BorrowedTextEnvelope {
+                server_sequence: 0,
+                ..valid
+            }]),
+            Err(CloudCachePolicyError::InvalidCloudCache)
+        );
+        assert_eq!(
+            plan_text_cache(&[BorrowedTextEnvelope {
+                ciphertext: &[],
+                ..valid
+            }]),
+            Err(CloudCachePolicyError::InvalidCiphertext)
+        );
     }
 
     #[test]
     fn oversize_rejected() {
         let huge = vec![2_u8; MAX_CLOUD_LOGICAL_BYTES];
-        assert_eq!(measured_text_charge(&huge), Err(CloudCachePolicyError::SizeLimitExceeded));
+        assert_eq!(
+            measured_text_charge(&huge),
+            Err(CloudCachePolicyError::SizeLimitExceeded)
+        );
     }
 }
 
@@ -260,17 +311,20 @@ mod cross_compiler_fixtures {
                     assert_eq!(
                         plan.retained_ids,
                         case.retained_ids.as_ref().expect("retained ids"),
-                        "case: {}", case.name
+                        "case: {}",
+                        case.name
                     );
                     assert_eq!(
                         plan.evicted_ids,
                         case.evicted_ids.as_ref().expect("evicted ids"),
-                        "case: {}", case.name
+                        "case: {}",
+                        case.name
                     );
                     assert_eq!(
                         Some(plan.logical_bytes),
                         case.logical_bytes,
-                        "case: {}", case.name
+                        "case: {}",
+                        case.name
                     );
                 }
                 (Err(error), Some(code)) => assert_eq!(error.code(), code, "case: {}", case.name),
