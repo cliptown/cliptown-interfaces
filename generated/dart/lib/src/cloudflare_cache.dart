@@ -7,6 +7,23 @@ const int maxCloudTextItems = 2000;
 const int maxCloudLogicalBytes = 5 * 1024 * 1024;
 const int cloudItemReserveBytes = 512;
 
+const int maxCloudDeviceSequence = 9007199254740990;
+
+/// Pure synchronous preflight over signed per-device mutation metadata.
+/// The D1 trigger remains authoritative against races and cache eviction.
+int checkedDeviceSequence(int incoming, int? previous) {
+  if (incoming <= 0 ||
+      incoming > maxCloudDeviceSequence ||
+      (previous != null &&
+          (previous <= 0 || previous > maxCloudDeviceSequence))) {
+    throw const CloudCachePolicyError('invalid_device_sequence');
+  }
+  if (previous != null && incoming <= previous) {
+    throw const CloudCachePolicyError('device_sequence_replay');
+  }
+  return incoming;
+}
+
 class CloudCacheEnvelopeView {
   const CloudCacheEnvelopeView({
     required this.envelopeId,
