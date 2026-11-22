@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import {
-  CloudCachePolicyError, MAX_CLOUD_TEXT_ITEMS, plan_text_cache,
+  CloudCachePolicyError, MAX_CLOUD_TEXT_ITEMS, MAX_CLOUD_DEVICE_SEQUENCE,
+  plan_text_cache, checked_device_sequence,
 } from '../generated/typescript/dist/cloudflare_cache.js';
 
 const fixture = JSON.parse(await readFile(
@@ -49,4 +50,37 @@ test('caller supplied stored_bytes cannot bypass measured quota', () => {
   const v = [{...toView({envelope_id: 'x', server_sequence: 1,
     kind: 'text', ciphertext_bytes: 100}), stored_bytes: 1}];
   assert.equal(plan_text_cache(v).logical_bytes, 612);
+});
+
+const replayFixtures = JSON.parse(await readFile(
+  new URL('../fixtures/cloudflare-device-replay-v1.json', import.meta.url), 'utf8',
+));
+
+test('Rust/Dart/TypeScript signed device watermark fixtures', async (t) => {
+  assert.equal(replayFixtures.protocol_version, 1);
+  assert.equal(replayFixtures.max_device_sequence, MAX_CLOUD_DEVICE_SEQUENCE);
+  for (const vector of replayFixtures.cases) {
+    await t.test(vector.name, () => {
+      if (vector.error) {
+        assert.throws(
+          () => checked_device_sequence(vector.incoming, vector.previous),
+          (error) => error instanceof CloudCachePolicyError &&
+            error.code === vector.error,
+        );
+      } else {
+        assert.equal(
+          checked_device_sequence(vector.incoming, vector.previous),
+          vector.accepted,
+        );
+      }
+    });
+  }
+});
+
+test('floating-point, NaN and unsafe signed metadata are rejected', () => {
+  for (const bad of [NaN, Infinity, -Infinity, 1.5,
+      Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => checked_device_sequence(bad, null),
+      (error) => error.code === 'invalid_device_sequence');
+  }
 });
