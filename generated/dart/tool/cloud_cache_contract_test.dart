@@ -58,5 +58,30 @@ void main() {
   check(cap.retainedIds.length == maxCloudTextItems, 'item cap mismatch');
   check(cap.evictedIds.length == 1 && cap.evictedIds.single == 'clip_0', 'evicted mismatch');
 
-  stdout.writeln('PASS: Dart compiled cache parity (' + cases.length.toString() + ' shared vectors + cap)');
+  final Map<String, dynamic> replayFixture =
+      jsonDecode(File('../../fixtures/cloudflare-device-replay-v1.json')
+          .readAsStringSync()) as Map<String, dynamic>;
+  check(replayFixture['protocol_version'] == 1, 'device replay protocol mismatch');
+  check(replayFixture['max_device_sequence'] == maxCloudDeviceSequence,
+      'signed sequence max mismatch');
+  final List<dynamic> replayCases = replayFixture['cases'] as List<dynamic>;
+  for (final dynamic vector in replayCases) {
+    final Map<String, dynamic> entry = vector as Map<String, dynamic>;
+    final String name = entry['name'] as String;
+    final String? expectedError = entry['error'] as String?;
+    try {
+      final int next = checkedDeviceSequence(
+        entry['incoming'] as int,
+        entry['previous'] as int?,
+      );
+      check(expectedError == null, '$name unexpectedly accepted');
+      check(next == entry['accepted'], '$name sequence mismatch');
+    } on CloudCachePolicyError catch (error) {
+      check(error.code == expectedError, '$name error mismatch: $error');
+    }
+  }
+
+  stdout.writeln('PASS: Dart compiled cache parity (' +
+      cases.length.toString() + ' cache vectors + ' +
+      replayCases.length.toString() + ' replay vectors and cap)');
 }
