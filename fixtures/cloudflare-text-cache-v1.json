@@ -1,0 +1,179 @@
+{
+  "protocol_version": 1,
+  "limits": {
+    "max_items": 2000,
+    "max_logical_bytes": 5242880,
+    "per_item_reserve_bytes": 512
+  },
+  "cases": [
+    {
+      "name": "empty",
+      "rows": [],
+      "retained_ids": [],
+      "evicted_ids": [],
+      "logical_bytes": 0
+    },
+    {
+      "name": "sorted",
+      "rows": [
+        {
+          "envelope_id": "old",
+          "server_sequence": 1,
+          "kind": "text",
+          "ciphertext_bytes": 2
+        },
+        {
+          "envelope_id": "new",
+          "server_sequence": 3,
+          "kind": "text",
+          "ciphertext_bytes": 3
+        },
+        {
+          "envelope_id": "middle",
+          "server_sequence": 2,
+          "kind": "text",
+          "ciphertext_bytes": 1
+        }
+      ],
+      "retained_ids": [
+        "new",
+        "middle",
+        "old"
+      ],
+      "evicted_ids": [],
+      "logical_bytes": 1542
+    },
+    {
+      "name": "tie_breaker",
+      "rows": [
+        {
+          "envelope_id": "a",
+          "server_sequence": 4,
+          "kind": "text",
+          "ciphertext_bytes": 1
+        },
+        {
+          "envelope_id": "b",
+          "server_sequence": 4,
+          "kind": "text",
+          "ciphertext_bytes": 1
+        }
+      ],
+      "retained_ids": [
+        "b",
+        "a"
+      ],
+      "evicted_ids": [],
+      "logical_bytes": 1026
+    },
+    {
+      "name": "byte_prefix",
+      "rows": [
+        {
+          "envelope_id": "old",
+          "server_sequence": 1,
+          "kind": "text",
+          "ciphertext_bytes": 1
+        },
+        {
+          "envelope_id": "new",
+          "server_sequence": 3,
+          "kind": "text",
+          "ciphertext_bytes": 5241856
+        },
+        {
+          "envelope_id": "middle",
+          "server_sequence": 2,
+          "kind": "text",
+          "ciphertext_bytes": 1024
+        }
+      ],
+      "retained_ids": [
+        "new"
+      ],
+      "evicted_ids": [
+        "middle",
+        "old"
+      ],
+      "logical_bytes": 5242368
+    },
+    {
+      "name": "duplicate_rejected",
+      "rows": [
+        {
+          "envelope_id": "same",
+          "server_sequence": 1,
+          "kind": "text",
+          "ciphertext_bytes": 1
+        },
+        {
+          "envelope_id": "same",
+          "server_sequence": 2,
+          "kind": "text",
+          "ciphertext_bytes": 1
+        }
+      ],
+      "error": "invalid_cloud_cache"
+    },
+    {
+      "name": "nontext_rejected",
+      "rows": [
+        {
+          "envelope_id": "file",
+          "server_sequence": 1,
+          "kind": "file",
+          "ciphertext_bytes": 1
+        }
+      ],
+      "error": "invalid_cloud_cache"
+    },
+    {
+      "name": "empty_ciphertext_rejected",
+      "rows": [
+        {
+          "envelope_id": "x",
+          "server_sequence": 1,
+          "kind": "text",
+          "ciphertext_bytes": 0
+        }
+      ],
+      "error": "invalid_ciphertext"
+    },
+    {
+      "name": "oversize_rejected",
+      "rows": [
+        {
+          "envelope_id": "x",
+          "server_sequence": 1,
+          "kind": "text",
+          "ciphertext_bytes": 5242880
+        }
+      ],
+      "error": "size_limit_exceeded"
+    },
+    {
+      "name": "bad_id_rejected",
+      "rows": [
+        {
+          "envelope_id": "bad/id",
+          "server_sequence": 1,
+          "kind": "text",
+          "ciphertext_bytes": 1
+        }
+      ],
+      "error": "invalid_cloud_cache"
+    },
+    {
+      "name": "zero_sequence_rejected",
+      "rows": [
+        {
+          "envelope_id": "bad",
+          "server_sequence": 0,
+          "kind": "text",
+          "ciphertext_bytes": 1
+        }
+      ],
+      "error": "invalid_cloud_cache"
+    }
+  ]
+}
