@@ -10,6 +10,26 @@ export const MAX_CLOUD_TEXT_ITEMS = 2_000;
 export const MAX_CLOUD_LOGICAL_BYTES = 5 * 1024 * 1024;
 export const CLOUD_ITEM_RESERVE_BYTES = 512;
 
+export const MAX_CLOUD_DEVICE_SEQUENCE = 9_007_199_254_740_990;
+
+/**
+ * Pure preflight for immutable, signed sequence metadata. No crypto or I/O.
+ * Cloudflare's D1 trigger independently enforces the sequence atomically.
+ * JS numbers may not exceed this exact cross-runtime safe-integer cap.
+ */
+export function checked_device_sequence(incoming: number, previous: number | null): number {
+  if (!Number.isSafeInteger(incoming) || incoming <= 0 ||
+      incoming > MAX_CLOUD_DEVICE_SEQUENCE ||
+      (previous !== null && (!Number.isSafeInteger(previous) ||
+        previous <= 0 || previous > MAX_CLOUD_DEVICE_SEQUENCE))) {
+    throw new CloudCachePolicyError('invalid_device_sequence');
+  }
+  if (previous !== null && incoming <= previous) {
+    throw new CloudCachePolicyError('device_sequence_replay');
+  }
+  return incoming;
+}
+
 export interface CloudCacheEnvelopeView {
   readonly envelope_id: string;
   readonly server_sequence: number;
@@ -24,7 +44,8 @@ export interface CloudCacheRetention {
 }
 
 export class CloudCachePolicyError extends Error {
-  constructor(readonly code: 'invalid_cloud_cache' | 'invalid_ciphertext' | 'size_limit_exceeded') {
+  constructor(readonly code: 'invalid_cloud_cache' | 'invalid_ciphertext' | 'size_limit_exceeded'
+    | 'invalid_device_sequence' | 'device_sequence_replay') {
     super(code);
     this.name = 'CloudCachePolicyError';
   }
