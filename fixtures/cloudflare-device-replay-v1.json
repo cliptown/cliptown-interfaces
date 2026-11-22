@@ -1,0 +1,72 @@
+{
+  "protocol_version": 1,
+  "max_device_sequence": 9007199254740990,
+  "cases": [
+    {
+      "name": "first",
+      "incoming": 1,
+      "previous": null,
+      "accepted": 1
+    },
+    {
+      "name": "advance",
+      "incoming": 2,
+      "previous": 1,
+      "accepted": 2
+    },
+    {
+      "name": "equal_replay",
+      "incoming": 1,
+      "previous": 1,
+      "error": "device_sequence_replay"
+    },
+    {
+      "name": "regressing_replay",
+      "incoming": 1,
+      "previous": 2,
+      "error": "device_sequence_replay"
+    },
+    {
+      "name": "zero",
+      "incoming": 0,
+      "previous": null,
+      "error": "invalid_device_sequence"
+    },
+    {
+      "name": "negative",
+      "incoming": -1,
+      "previous": null,
+      "error": "invalid_device_sequence"
+    },
+    {
+      "name": "max_safe_signed",
+      "incoming": 9007199254740990,
+      "previous": 9007199254740989,
+      "accepted": 9007199254740990
+    },
+    {
+      "name": "over_max_safe_signed",
+      "incoming": 9007199254740991,
+      "previous": null,
+      "error": "invalid_device_sequence"
+    },
+    {
+      "name": "invalid_previous_negative",
+      "incoming": 1,
+      "previous": -1,
+      "error": "invalid_device_sequence"
+    },
+    {
+      "name": "invalid_previous_over_max",
+      "incoming": 2,
+      "previous": 9007199254740991,
+      "error": "invalid_device_sequence"
+    },
+    {
+      "name": "max_previous_no_increment",
+      "incoming": 9007199254740990,
+      "previous": 9007199254740990,
+      "error": "device_sequence_replay"
+    }
+  ]
+}
