@@ -3,7 +3,7 @@ import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import {
   CloudCachePolicyError, MAX_CLOUD_TEXT_ITEMS, MAX_CLOUD_DEVICE_SEQUENCE,
-  plan_text_cache, checked_device_sequence,
+  plan_text_cache, checked_device_sequence, canonical_device_proof_bytes,
 } from '../generated/typescript/dist/cloudflare_cache.js';
 
 const fixture = JSON.parse(await readFile(
@@ -82,5 +82,22 @@ test('floating-point, NaN and unsafe signed metadata are rejected', () => {
       Number.MAX_SAFE_INTEGER + 1]) {
     assert.throws(() => checked_device_sequence(bad, null),
       (error) => error.code === 'invalid_device_sequence');
+  }
+});
+
+const proofFixtures = JSON.parse(await readFile(
+  new URL('../fixtures/cloudflare-device-proof-canonical-v1.json', import.meta.url),
+  'utf8',
+));
+
+test('Rust/Dart/TypeScript canonical Ed25519 signing bytes match', async (t) => {
+  assert.equal(proofFixtures.protocol_version, 1);
+  for (const vector of proofFixtures.vectors) {
+    await t.test(vector.case, () => {
+      const actual = canonical_device_proof_bytes(vector);
+      assert.equal(new TextDecoder().decode(actual), vector.canonical_message);
+      assert.equal(actual.byteLength,
+        new TextEncoder().encode(vector.canonical_message).byteLength);
+    });
   }
 });
