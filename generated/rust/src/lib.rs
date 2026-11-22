@@ -1,7 +1,9 @@
 mod app_vault;
+mod cloud_cache;
 mod security;
 mod step_up;
 pub use app_vault::*;
+pub use cloud_cache::*;
 pub use security::*;
 pub use step_up::*;
 

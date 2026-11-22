@@ -1,3 +1,4 @@
+export * from './cloudflare_cache.js';
 export * from './app_vault.js';
 export * from './security.js';
 export * from './step_up.js';

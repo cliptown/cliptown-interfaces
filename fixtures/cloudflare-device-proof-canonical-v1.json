@@ -1,0 +1,43 @@
+{
+  "protocol_version": 1,
+  "vectors": [
+    {
+      "case": "text_write",
+      "account_id": "account_a",
+      "tenant_id": "tenant_a",
+      "application_id": "cliptown",
+      "protocol": "cliptown.device_auth.v1",
+      "purpose": "text_cache.write",
+      "device_id": "device_a",
+      "envelope_id": "clip_1",
+      "ciphertext_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "media_kind": "text",
+      "device_sequence": 7,
+      "key_epoch": 3,
+      "revocation_epoch": 2,
+      "issued_at_ms": 1700000000000,
+      "expires_at_ms": 1700000060000,
+      "nonce": "AAAAAAAAAAAAAAAAAAAAAA",
+      "canonical_message": "[\"cliptown.device_auth.v1\",\"account_a\",\"tenant_a\",\"cliptown\",\"text_cache.write\",\"device_a\",\"clip_1\",\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"text\",7,3,2,1700000000000,1700000060000,\"AAAAAAAAAAAAAAAAAAAAAA\"]"
+    },
+    {
+      "case": "text_read",
+      "account_id": "account_a",
+      "tenant_id": "tenant_a",
+      "application_id": "cliptown",
+      "protocol": "cliptown.device_auth.v1",
+      "purpose": "text_cache.read",
+      "device_id": "device_a",
+      "envelope_id": "",
+      "ciphertext_digest": "",
+      "media_kind": "none",
+      "device_sequence": 0,
+      "key_epoch": 3,
+      "revocation_epoch": 2,
+      "issued_at_ms": 1700000000100,
+      "expires_at_ms": 1700000050100,
+      "nonce": "ZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+      "canonical_message": "[\"cliptown.device_auth.v1\",\"account_a\",\"tenant_a\",\"cliptown\",\"text_cache.read\",\"device_a\",\"\",\"\",\"none\",0,3,2,1700000000100,1700000050100,\"ZZZZZZZZZZZZZZZZZZZZZZZZZZ\"]"
+    }
+  ]
+}

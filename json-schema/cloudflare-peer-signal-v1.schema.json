@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cliptown.app/schemas/cloudflare-peer-signal-v1.schema.json",
+  "title": "ClipTown Cloudflare peer signal v1 (opaque ciphertext)",
+  "description": "Bounded, signed, recipient-bound WebRTC signaling ciphertext; never transports plaintext SDP/ICE and does not grant device authorization.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "purpose",
+    "message_kind",
+    "message_id",
+    "session_id",
+    "sender_device_id",
+    "recipient_device_id",
+    "sequence",
+    "issued_at_unix_ms",
+    "expires_at_unix_ms",
+    "key_epoch",
+    "ciphertext",
+    "ciphertext_sha256",
+    "signing_key_id",
+    "signature"
+  ],
+  "properties": {
+    "protocol": {
+      "const": "cliptown.peer_signal.v1"
+    },
+    "purpose": {
+      "const": "cliptown:peer:signal"
+    },
+    "message_kind": {
+      "enum": [
+        "offer",
+        "answer",
+        "ice",
+        "close"
+      ]
+    },
+    "message_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22,86}$"
+    },
+    "sender_device_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "recipient_device_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "issued_at_unix_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "expires_at_unix_ms": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "key_epoch": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "ciphertext": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "minLength": 1,
+      "maxLength": 16384,
+      "description": "Unpadded base64url ciphertext; decoded bytes must be <=12KiB and signed before exchange."
+    },
+    "ciphertext_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "signing_key_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:@/-]{1,128}$"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{86}$"
+    }
+  }
+}
