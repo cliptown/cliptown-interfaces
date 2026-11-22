@@ -81,6 +81,34 @@ void main() {
     }
   }
 
+  final Map<String, dynamic> proofFixture =
+      jsonDecode(File('../../fixtures/cloudflare-device-proof-canonical-v1.json')
+          .readAsStringSync()) as Map<String, dynamic>;
+  check(proofFixture['protocol_version'] == 1, 'proof protocol mismatch');
+  final List<dynamic> proofVectors = proofFixture['vectors'] as List<dynamic>;
+  for (final dynamic element in proofVectors) {
+    final Map<String, dynamic> vector = element as Map<String, dynamic>;
+    final DeviceProofSigningFields signing = DeviceProofSigningFields(
+      accountId: vector['account_id'] as String,
+      tenantId: vector['tenant_id'] as String,
+      applicationId: vector['application_id'] as String,
+      purpose: vector['purpose'] as String,
+      deviceId: vector['device_id'] as String,
+      envelopeId: vector['envelope_id'] as String,
+      ciphertextDigest: vector['ciphertext_digest'] as String,
+      mediaKind: vector['media_kind'] as String,
+      deviceSequence: vector['device_sequence'] as int,
+      keyEpoch: vector['key_epoch'] as int,
+      revocationEpoch: vector['revocation_epoch'] as int,
+      issuedAtMs: vector['issued_at_ms'] as int,
+      expiresAtMs: vector['expires_at_ms'] as int,
+      nonce: vector['nonce'] as String,
+    );
+    check(utf8.decode(canonicalDeviceProofBytes(signing)) ==
+        vector['canonical_message'],
+        'canonical signed proof drift: ' + (vector['case'] as String));
+  }
+
   stdout.writeln('PASS: Dart compiled cache parity (' +
       cases.length.toString() + ' cache vectors + ' +
       replayCases.length.toString() + ' replay vectors and cap)');
