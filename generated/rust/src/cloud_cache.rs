@@ -45,9 +45,7 @@ pub fn checked_device_sequence(
     previous: Option<i64>,
 ) -> Result<i64, CloudCachePolicyError> {
     if !(1..=MAX_CLOUD_DEVICE_SEQUENCE).contains(&incoming)
-        || previous.is_some_and(|value| {
-            !(1..=MAX_CLOUD_DEVICE_SEQUENCE).contains(&value)
-        })
+        || previous.is_some_and(|value| !(1..=MAX_CLOUD_DEVICE_SEQUENCE).contains(&value))
     {
         return Err(CloudCachePolicyError::InvalidDeviceSequence);
     }
