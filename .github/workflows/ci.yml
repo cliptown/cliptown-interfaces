@@ -65,6 +65,8 @@ jobs:
           node-version: 22
       - name: Protect encrypted ClipTown envelope boundaries
         run: node --test tests/clip-envelope-privacy.test.mjs
+      - name: Verify signed device-proof schema contains no secrets
+        run: node --test tests/cloudflare-device-proof-schema.test.mjs
       - name: Compile JSON Schemas with pinned validators
         run: |
           for schema in json-schema/*.schema.json; do
