@@ -1,6 +1,7 @@
 // Cloudflare encrypted text cache policy. No plaintext, decryption or network.
 // Unlike Rust, Dart cannot enforce borrow lifetimes: call synchronously and
 // do not mutate the passed Uint8List while the policy is inspecting it.
+import 'dart:convert';
 import 'dart:typed_data';
 
 const int maxCloudTextItems = 2000;
@@ -120,3 +121,60 @@ CloudCacheRetention planTextCache(List<CloudCacheEnvelopeView> rows) {
     logicalBytes: retainedBytes,
   );
 }
+
+
+/// Exact signing array for the enrolled device proof. This only encodes
+/// immutable metadata; authentication and Ed25519 signing occur elsewhere.
+class DeviceProofSigningFields {
+  const DeviceProofSigningFields({
+    required this.accountId,
+    required this.tenantId,
+    required this.applicationId,
+    required this.purpose,
+    required this.deviceId,
+    required this.envelopeId,
+    required this.ciphertextDigest,
+    required this.mediaKind,
+    required this.deviceSequence,
+    required this.keyEpoch,
+    required this.revocationEpoch,
+    required this.issuedAtMs,
+    required this.expiresAtMs,
+    required this.nonce,
+  });
+
+  final String accountId;
+  final String tenantId;
+  final String applicationId;
+  final String purpose;
+  final String deviceId;
+  final String envelopeId;
+  final String ciphertextDigest;
+  final String mediaKind;
+  final int deviceSequence;
+  final int keyEpoch;
+  final int revocationEpoch;
+  final int issuedAtMs;
+  final int expiresAtMs;
+  final String nonce;
+}
+
+/// UTF-8 JSON array order matches the Cloudflare Worker and Rust/TypeScript.
+List<int> canonicalDeviceProofBytes(DeviceProofSigningFields fields) =>
+    utf8.encode(jsonEncode(<Object>[
+      'cliptown.device_auth.v1',
+      fields.accountId,
+      fields.tenantId,
+      fields.applicationId,
+      fields.purpose,
+      fields.deviceId,
+      fields.envelopeId,
+      fields.ciphertextDigest,
+      fields.mediaKind,
+      fields.deviceSequence,
+      fields.keyEpoch,
+      fields.revocationEpoch,
+      fields.issuedAtMs,
+      fields.expiresAtMs,
+      fields.nonce,
+    ]));
