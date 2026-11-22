@@ -408,3 +408,110 @@ mod shared_replay_fixtures {
         }
     }
 }
+
+
+/// Exact immutable Ed25519 signing input shared by independent ClipTown
+/// clients. This function does not authorize or sign a request.
+pub struct DeviceProofSigningFields<'a> {
+    pub account_id: &'a str,
+    pub tenant_id: &'a str,
+    pub application_id: &'a str,
+    pub purpose: &'a str,
+    pub device_id: &'a str,
+    pub envelope_id: &'a str,
+    pub ciphertext_digest: &'a str,
+    pub media_kind: &'a str,
+    pub device_sequence: i64,
+    pub key_epoch: i64,
+    pub revocation_epoch: i64,
+    pub issued_at_ms: i64,
+    pub expires_at_ms: i64,
+    pub nonce: &'a str,
+}
+
+pub fn canonical_device_proof_bytes(fields: &DeviceProofSigningFields<'_>) -> Vec<u8> {
+    serde_json::json!([
+        "cliptown.device_auth.v1",
+        fields.account_id,
+        fields.tenant_id,
+        fields.application_id,
+        fields.purpose,
+        fields.device_id,
+        fields.envelope_id,
+        fields.ciphertext_digest,
+        fields.media_kind,
+        fields.device_sequence,
+        fields.key_epoch,
+        fields.revocation_epoch,
+        fields.issued_at_ms,
+        fields.expires_at_ms,
+        fields.nonce,
+    ])
+    .to_string()
+    .into_bytes()
+}
+
+#[cfg(test)]
+mod shared_device_proof_fixtures {
+    use super::*;
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    struct ProofVector {
+        case: String,
+        account_id: String,
+        tenant_id: String,
+        application_id: String,
+        purpose: String,
+        device_id: String,
+        envelope_id: String,
+        ciphertext_digest: String,
+        media_kind: String,
+        device_sequence: i64,
+        key_epoch: i64,
+        revocation_epoch: i64,
+        issued_at_ms: i64,
+        expires_at_ms: i64,
+        nonce: String,
+        canonical_message: String,
+    }
+
+    #[derive(Deserialize)]
+    struct ProofFixtures {
+        protocol_version: u32,
+        vectors: Vec<ProofVector>,
+    }
+
+    #[test]
+    fn canonical_signing_bytes_match_dart_typescript_worker() {
+        let fixture: ProofFixtures = serde_json::from_str(include_str!(
+            "../../../fixtures/cloudflare-device-proof-canonical-v1.json"
+        ))
+        .expect("canonical proof fixture");
+        assert_eq!(fixture.protocol_version, 1);
+        for item in &fixture.vectors {
+            let fields = DeviceProofSigningFields {
+                account_id: &item.account_id,
+                tenant_id: &item.tenant_id,
+                application_id: &item.application_id,
+                purpose: &item.purpose,
+                device_id: &item.device_id,
+                envelope_id: &item.envelope_id,
+                ciphertext_digest: &item.ciphertext_digest,
+                media_kind: &item.media_kind,
+                device_sequence: item.device_sequence,
+                key_epoch: item.key_epoch,
+                revocation_epoch: item.revocation_epoch,
+                issued_at_ms: item.issued_at_ms,
+                expires_at_ms: item.expires_at_ms,
+                nonce: &item.nonce,
+            };
+            assert_eq!(
+                canonical_device_proof_bytes(&fields),
+                item.canonical_message.as_bytes(),
+                "case: {}",
+                item.case
+            );
+        }
+    }
+}
