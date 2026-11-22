@@ -308,18 +308,22 @@ mod cross_compiler_fixtures {
 
             match (plan_text_cache(&rows), &case.error) {
                 (Ok(plan), None) => {
-                    assert_eq!(
-                        plan.retained_ids,
-                        case.retained_ids.as_ref().expect("retained ids"),
-                        "case: {}",
-                        case.name
-                    );
-                    assert_eq!(
-                        plan.evicted_ids,
-                        case.evicted_ids.as_ref().expect("evicted ids"),
-                        "case: {}",
-                        case.name
-                    );
+                    let expected_retained = case
+                        .retained_ids
+                        .as_ref()
+                        .expect("retained ids")
+                        .iter()
+                        .map(String::as_str)
+                        .collect::<Vec<_>>();
+                    let expected_evicted = case
+                        .evicted_ids
+                        .as_ref()
+                        .expect("evicted ids")
+                        .iter()
+                        .map(String::as_str)
+                        .collect::<Vec<_>>();
+                    assert_eq!(plan.retained_ids, expected_retained, "case: {}", case.name);
+                    assert_eq!(plan.evicted_ids, expected_evicted, "case: {}", case.name);
                     assert_eq!(
                         Some(plan.logical_bytes),
                         case.logical_bytes,
